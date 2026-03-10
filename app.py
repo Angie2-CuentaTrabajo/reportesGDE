@@ -1,4 +1,4 @@
-﻿import streamlit as st
+import streamlit as st
 from modules.pachambear import show_pachambear_module
 from modules.ferias import show_ferias_module
 from modules.comercio_ambulatorio import show_comercio_ambulatorio_module

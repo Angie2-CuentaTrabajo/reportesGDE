@@ -1,4 +1,4 @@
-﻿# modules/comercio_ambulatorio.py
+# modules/comercio_ambulatorio.py
 
 import pandas as pd
 import plotly.express as px
@@ -97,12 +97,10 @@ def load_comercio_ambulatorio_data():
 
             df = df.dropna(subset=["FECHA_EMITIDA"])
 
-        # Campos derivados
         df["AÑO"] = df["AÑO"].astype(str)
         df["MES_NUM"] = df["FECHA_EMITIDA"].dt.month
         df["MES"] = df["MES_NUM"].map(get_spanish_month)
 
-        # Ordenar por fecha
         df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
 
         return df
@@ -110,6 +108,20 @@ def load_comercio_ambulatorio_data():
     except Exception as e:
         st.error(f"🚨 Error al cargar datos: {str(e)}")
         return None
+
+
+def load_comercio_ambulatorio_recaudacion_data():
+    """Carga los datos fijos de recaudación de comercio ambulatorio."""
+    data = [
+        {"AÑO": "2023", "PERMISOS": 398, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 143280.0},
+        {"AÑO": "2024", "PERMISOS": 183, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 65880.0},
+        {"AÑO": "2025", "PERMISOS": 125, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 45000.0},
+        {"AÑO": "2026", "PERMISOS": 37, "MESES": 3, "COSTO": 30.0, "TOTAL_RECAUDADO": 3330.0},
+    ]
+
+    df = pd.DataFrame(data)
+    df["AÑO"] = pd.Categorical(df["AÑO"], categories=YEAR_ORDER, ordered=True)
+    return df
 
 
 def grafico_comparativa_meses(df):
@@ -290,8 +302,8 @@ def tabla_resumen(df):
 
 
 def estadisticas_generales(df):
-    """Muestra KPIs generales."""
-    st.subheader("📊 Estadísticas Generales")
+    """Muestra KPIs generales de autorizaciones."""
+    st.subheader("📊 Estadísticas Generales de Autorizaciones")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -317,9 +329,127 @@ def estadisticas_generales(df):
     c4.metric("📈 Promedio/Mes", f"{promedio_mes:.1f}")
 
 
+def estadisticas_recaudacion(recaud_df):
+    """Muestra KPIs generales de recaudación."""
+    st.subheader("💰 Estadísticas Generales de Recaudación")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    total_recaudado = float(recaud_df["TOTAL_RECAUDADO"].sum())
+    anio_max_recaudacion = recaud_df.loc[recaud_df["TOTAL_RECAUDADO"].idxmax(), "AÑO"]
+    promedio_anual = recaud_df["TOTAL_RECAUDADO"].mean()
+    costo_mensual = recaud_df["COSTO"].iloc[0]
+
+    c1.metric("💵 Total Recaudado", f"S/ {total_recaudado:,.2f}")
+    c2.metric("🏆 Año con Mayor Recaudación", str(anio_max_recaudacion))
+    c3.metric("📈 Promedio Anual", f"S/ {promedio_anual:,.2f}")
+    c4.metric("🧾 Costo Mensual", f"S/ {costo_mensual:,.2f}")
+
+
+def grafico_recaudacion_por_ano(recaud_df):
+    """Gráfico de barras de recaudación por año."""
+    st.subheader("💰 Recaudación por Año")
+
+    fig = px.bar(
+        recaud_df,
+        x="AÑO",
+        y="TOTAL_RECAUDADO",
+        color="AÑO",
+        text="TOTAL_RECAUDADO",
+        color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
+        height=350,
+        labels={
+            "AÑO": "Año",
+            "TOTAL_RECAUDADO": "Recaudación Total (S/)"
+        }
+    )
+
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Año",
+        yaxis_title="Recaudación Total (S/)",
+        showlegend=False
+    )
+
+    fig.update_xaxes(type="category")
+
+    fig.update_traces(
+        texttemplate="S/ %{y:,.2f}",
+        textposition="outside",
+        marker_line_color="rgba(0,0,0,0.3)",
+        marker_line_width=2
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def grafico_permisos_vs_recaudacion(recaud_df):
+    """Gráfico comparativo entre permisos y recaudación."""
+    st.subheader("📈 Permisos vs Recaudación")
+
+    df_chart = recaud_df.copy()
+    df_chart["AÑO"] = df_chart["AÑO"].astype(str)
+
+    fig = px.scatter(
+        df_chart,
+        x="PERMISOS",
+        y="TOTAL_RECAUDADO",
+        color="AÑO",
+        size="PERMISOS",
+        text="AÑO",
+        color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
+        height=420,
+        labels={
+            "PERMISOS": "Cantidad de Permisos",
+            "TOTAL_RECAUDADO": "Recaudación Total (S/)"
+        }
+    )
+
+    fig.update_traces(
+        textposition="top center",
+        marker=dict(line=dict(width=1, color="rgba(0,0,0,0.3)"))
+    )
+
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Cantidad de Permisos",
+        yaxis_title="Recaudación Total (S/)"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def tabla_recaudacion(recaud_df):
+    """Tabla resumen de recaudación."""
+    st.subheader("📋 Tabla Resumen de Recaudación")
+
+    tabla_df = recaud_df.copy().rename(columns={
+        "AÑO": "Año",
+        "PERMISOS": "Permisos",
+        "MESES": "Meses",
+        "COSTO": "Costo",
+        "TOTAL_RECAUDADO": "Total Recaudado"
+    })
+
+    st.dataframe(
+        tabla_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Año": st.column_config.TextColumn("Año", width="small"),
+            "Permisos": st.column_config.NumberColumn("Permisos", format="%d"),
+            "Meses": st.column_config.NumberColumn("Meses", format="%d"),
+            "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
+            "Total Recaudado": st.column_config.NumberColumn("Total Recaudado", format="S/ %.2f"),
+        }
+    )
+
+
 def observaciones(df):
     """Muestra observaciones automáticas del comportamiento anual y mensual."""
-    st.subheader("📝 Observaciones")
+    st.subheader("📝 Observaciones de Autorizaciones")
 
     total_anual = (
         df.groupby("AÑO")
@@ -430,6 +560,64 @@ def observaciones(df):
     st.info(texto)
 
 
+def observaciones_recaudacion(recaud_df):
+    """Muestra observaciones automáticas de la recaudación."""
+    st.subheader("📝 Observaciones de Recaudación")
+
+    mayor_recaudacion = recaud_df.loc[recaud_df["TOTAL_RECAUDADO"].idxmax()]
+    menor_recaudacion = recaud_df.loc[recaud_df["TOTAL_RECAUDADO"].idxmin()]
+
+    def variacion_pct(base, actual):
+        if base == 0:
+            return None
+        return ((actual - base) / base) * 100
+
+    rec_2023 = recaud_df.loc[recaud_df["AÑO"] == "2023", "TOTAL_RECAUDADO"].iloc[0]
+    rec_2024 = recaud_df.loc[recaud_df["AÑO"] == "2024", "TOTAL_RECAUDADO"].iloc[0]
+    rec_2025 = recaud_df.loc[recaud_df["AÑO"] == "2025", "TOTAL_RECAUDADO"].iloc[0]
+    rec_2026 = recaud_df.loc[recaud_df["AÑO"] == "2026", "TOTAL_RECAUDADO"].iloc[0]
+
+    var_23_24 = variacion_pct(rec_2023, rec_2024)
+    var_24_25 = variacion_pct(rec_2024, rec_2025)
+    var_25_26 = variacion_pct(rec_2025, rec_2026)
+
+    total_recaudado = recaud_df["TOTAL_RECAUDADO"].sum()
+
+    texto = (
+        f"- La recaudación total del periodo asciende a **S/ {total_recaudado:,.2f}**.\n"
+        f"- El año con mayor recaudación fue **{mayor_recaudacion['AÑO']}**, con **S/ {mayor_recaudacion['TOTAL_RECAUDADO']:,.2f}**.\n"
+        f"- El año con menor recaudación fue **{menor_recaudacion['AÑO']}**, con **S/ {menor_recaudacion['TOTAL_RECAUDADO']:,.2f}**.\n"
+    )
+
+    if var_23_24 is not None:
+        tendencia = "disminución" if var_23_24 < 0 else "incremento"
+        texto += (
+            f"- Entre **2023 y 2024** se registra una **{tendencia}** de "
+            f"**{abs(var_23_24):.1f}%** en la recaudación.\n"
+        )
+
+    if var_24_25 is not None:
+        tendencia = "disminución" if var_24_25 < 0 else "incremento"
+        texto += (
+            f"- Entre **2024 y 2025** se registra una **{tendencia}** de "
+            f"**{abs(var_24_25):.1f}%** en la recaudación.\n"
+        )
+
+    if var_25_26 is not None:
+        tendencia = "disminución" if var_25_26 < 0 else "incremento"
+        texto += (
+            f"- Entre **2025 y 2026** se registra una **{tendencia}** de "
+            f"**{abs(var_25_26):.1f}%** en la recaudación acumulada.\n"
+        )
+
+    texto += (
+        "- El valor consignado para **2026** corresponde únicamente a **3 meses**, por lo que no resulta directamente comparable con años completos.\n"
+        "- La recaudación presentada se basa en el cuadro consolidado proporcionado para permisos, meses, costo y total anual."
+    )
+
+    st.info(texto)
+
+
 def show_comercio_ambulatorio_module():
     """Módulo completo de Comercio Ambulatorio."""
     st.header("📍 Módulo de Autorizaciones de Comercio Ambulatorio")
@@ -437,6 +625,8 @@ def show_comercio_ambulatorio_module():
 
     with st.spinner("🔍 Cargando datos..."):
         df = load_comercio_ambulatorio_data()
+
+    recaud_df = load_comercio_ambulatorio_recaudacion_data()
 
     if df is None or df.empty:
         st.error("No se pudieron cargar los datos.")
@@ -458,3 +648,18 @@ def show_comercio_ambulatorio_module():
     st.markdown("---")
 
     observaciones(df)
+    st.markdown("---")
+
+    estadisticas_recaudacion(recaud_df)
+    st.markdown("---")
+
+    grafico_recaudacion_por_ano(recaud_df)
+    st.markdown("---")
+
+    grafico_permisos_vs_recaudacion(recaud_df)
+    st.markdown("---")
+
+    tabla_recaudacion(recaud_df)
+    st.markdown("---")
+
+    observaciones_recaudacion(recaud_df)

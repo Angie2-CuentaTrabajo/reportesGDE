@@ -3,6 +3,7 @@ from modules.pachambear import show_pachambear_module
 from modules.ferias import show_ferias_module
 from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
 from modules.anuncios_publicitarios import show_anuncios_publicitarios_module
+
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Reportes Municipales",
@@ -14,7 +15,12 @@ st.set_page_config(
 st.sidebar.title("📁 Navegación")
 modulo = st.sidebar.radio(
     "Seleccione un módulo:",
-    ("PACHAMBEAR", "FERIAS", "COMERCIO AMBULATORIO", "Otros reportes")
+    (
+        "PACHAMBEAR",
+        "FERIAS",
+        "COMERCIO AMBULATORIO",
+        "ANUNCIOS PUBLICITARIOS"
+    )
 )
 
 # Encabezado principal

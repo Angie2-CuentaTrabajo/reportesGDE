@@ -4,6 +4,7 @@ from modules.ferias import show_ferias_module
 from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
 from modules.anuncios_publicitarios import show_anuncios_publicitarios_module
 from modules.licencias_funcionamiento import show_licencias_funcionamiento_module
+from modules.pachamikuy import show_pachamikuy_module
 # Configuración de la página
 st.set_page_config(
     page_title="Sistema de Reportes Municipales",
@@ -15,7 +16,8 @@ st.set_page_config(
 st.sidebar.title("📁 Navegación")
 modulo = st.sidebar.radio(
     "Seleccione un módulo:",
-    (
+    (   
+        "PACHAMIKUY",
         "PACHAMBEAR",
         "FERIAS",
         "COMERCIO AMBULATORIO",
@@ -38,5 +40,7 @@ elif modulo == "ANUNCIOS PUBLICITARIOS":
     show_anuncios_publicitarios_module()
 elif modulo == "LICENCIAS DE FUNCIONAMIENTO":
     show_licencias_funcionamiento_module()
+elif modulo == "PACHAMIKUY":
+    show_pachamikuy_module()
 else:
     st.info("⚙️ Módulo en desarrollo. Próximamente disponible.")

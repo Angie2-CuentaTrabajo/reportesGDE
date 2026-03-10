@@ -4,13 +4,15 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-# Paleta de colores
+# Colores por periodo
 YEAR_COLORS = {
     "2023": "#e74c3c",
     "2024": "#3498db",
     "2025": "#2ecc71",
-    "2026 (E y F)": "#f39c12"
+    "2026 (E y F)": "#f39c12",
 }
+
+YEAR_ORDER = ["2023", "2024", "2025", "2026 (E y F)"]
 
 
 def load_anuncios_publicitarios_data():
@@ -23,6 +25,10 @@ def load_anuncios_publicitarios_data():
     ]
 
     df = pd.DataFrame(data)
+
+    # Forzar a texto para que Plotly no lo trate como numérico
+    df["AÑO"] = df["AÑO"].astype(str)
+
     return df
 
 
@@ -34,12 +40,12 @@ def estadisticas_generales(df):
 
     total_certificados = int(df["N_CERT_EMITIDOS"].sum())
     total_recaudado = float(df["RECAUDACION"].sum())
-    anio_max_cert = df.loc[df["N_CERT_EMITIDOS"].idxmax(), "AÑO"]
+    periodo_max_cert = df.loc[df["N_CERT_EMITIDOS"].idxmax(), "AÑO"]
     promedio_certificados = df["N_CERT_EMITIDOS"].mean()
 
     c1.metric("📄 Total Certificados", f"{total_certificados:,}")
     c2.metric("💰 Recaudación Total", f"S/ {total_recaudado:,.2f}")
-    c3.metric("🏆 Año Más Activo", anio_max_cert)
+    c3.metric("🏆 Periodo Más Activo", periodo_max_cert)
     c4.metric("📈 Promedio Certificados", f"{promedio_certificados:.1f}")
 
 
@@ -54,6 +60,7 @@ def grafico_certificados_emitidos(df):
         color="AÑO",
         text="N_CERT_EMITIDOS",
         color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
         height=420,
         labels={
             "AÑO": "Año",
@@ -67,6 +74,9 @@ def grafico_certificados_emitidos(df):
         yaxis_title="N° de Certificados Emitidos",
         showlegend=False
     )
+
+    # Forzar eje categórico
+    fig.update_xaxes(type="category")
 
     fig.update_traces(
         textposition="outside",
@@ -88,6 +98,7 @@ def grafico_recaudacion(df):
         color="AÑO",
         text="RECAUDACION",
         color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
         height=420,
         labels={
             "AÑO": "Año",
@@ -109,15 +120,17 @@ def grafico_recaudacion(df):
         showlegend=False
     )
 
+    # Forzar eje categórico
+    fig.update_xaxes(type="category")
+
     st.plotly_chart(fig, use_container_width=True)
 
 
 def grafico_comparativo(df):
-    """Gráfico combinado de certificados y recaudación."""
+    """Gráfico comparativo entre certificados y recaudación."""
     st.subheader("📈 Comparativo General")
 
     df_chart = df.copy()
-    df_chart["RECAUDACION_TEXTO"] = df_chart["RECAUDACION"].apply(lambda x: f"S/ {x:,.2f}")
 
     fig = px.scatter(
         df_chart,
@@ -127,6 +140,7 @@ def grafico_comparativo(df):
         size="N_CERT_EMITIDOS",
         text="AÑO",
         color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
         height=450,
         labels={
             "N_CERT_EMITIDOS": "N° de Certificados Emitidos",
@@ -175,15 +189,15 @@ def observaciones(df):
     """Bloque de observaciones automáticas."""
     st.subheader("📝 Observaciones")
 
-    anio_max_cert = df.loc[df["N_CERT_EMITIDOS"].idxmax(), "AÑO"]
-    anio_max_rec = df.loc[df["RECAUDACION"].idxmax(), "AÑO"]
+    periodo_max_cert = df.loc[df["N_CERT_EMITIDOS"].idxmax(), "AÑO"]
+    periodo_max_rec = df.loc[df["RECAUDACION"].idxmax(), "AÑO"]
 
     st.info(
         f"""
-        - El periodo con mayor cantidad de certificados emitidos fue **{anio_max_cert}**.
-        - El periodo con mayor recaudación fue **{anio_max_rec}**.
-        - El registro **2026 (E y F)** corresponde únicamente a **enero y febrero**.
-        """
+- El periodo con mayor cantidad de certificados emitidos fue **{periodo_max_cert}**.
+- El periodo con mayor recaudación fue **{periodo_max_rec}**.
+- El registro **2026 (E y F)** corresponde únicamente a **enero y febrero**.
+"""
     )
 
 

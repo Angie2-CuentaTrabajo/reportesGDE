@@ -116,7 +116,7 @@ def grafico_trend_mensual(df):
     st.plotly_chart(fig, use_container_width=True)
 
 def grafico_recaudacion_mensual_comparada():
-    st.subheader("Recaudacion mensual por anio")
+    st.subheader("Recaudacion mensual por año")
 
     path_base = Path(__file__).parent.parent / "data" / "ferias"
     registros = []
@@ -156,10 +156,10 @@ def grafico_recaudacion_mensual_comparada():
         text="RECAUDACION",
         category_orders={"MES": meses_orden},
         color_discrete_sequence=COLOR_MAP,
-        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)", "ANIO": "Anio"},
+        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)", "ANIO": "Año"},
     )
     fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
-    fig.update_layout(xaxis_title="Mes", yaxis_title="Recaudacion (S/)", legend_title="Anio")
+    fig.update_layout(xaxis_title="Mes", yaxis_title="Recaudacion (S/)", legend_title="Año")
     st.plotly_chart(fig, use_container_width=True)
 
     tabla = resumen.pivot(index="MES", columns="ANIO", values="RECAUDACION").reset_index()

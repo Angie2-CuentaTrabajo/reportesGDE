@@ -212,7 +212,7 @@ def estadisticas_generales(resumen_df):
 
 
 def grafico_expedientes(resumen_df):
-    st.subheader("Expedientes por Anio")
+    st.subheader("Expedientes por Año")
 
     fig = px.bar(
         resumen_df,
@@ -223,12 +223,12 @@ def grafico_expedientes(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Anio", "EXPEDIENTES": "Nro. de Expedientes"}
+        labels={"PERIODO": "Año", "EXPEDIENTES": "Nro. de Expedientes"}
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Anio",
+        xaxis_title="Año",
         yaxis_title="Nro. de Expedientes",
         showlegend=False
     )
@@ -244,7 +244,7 @@ def grafico_expedientes(resumen_df):
 
 
 def grafico_recaudacion(resumen_df):
-    st.subheader("Recaudacion por Anio")
+    st.subheader("Recaudacion por Año")
 
     fig = px.bar(
         resumen_df,
@@ -255,7 +255,7 @@ def grafico_recaudacion(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Anio", "RECAUDACION": "Recaudacion (S/)"}
+        labels={"PERIODO": "Año", "RECAUDACION": "Recaudacion (S/)"}
     )
 
     fig.update_traces(
@@ -267,7 +267,7 @@ def grafico_recaudacion(resumen_df):
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Anio",
+        xaxis_title="Año",
         yaxis_title="Recaudacion (S/)",
         showlegend=False
     )
@@ -296,7 +296,7 @@ def grafico_riesgo_apilado(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "Anio",
+            "PERIODO": "Año",
             "EXPEDIENTES": "Nro. de Expedientes",
             "RIESGO_AGRUPADO": "Riesgo"
         }
@@ -304,7 +304,7 @@ def grafico_riesgo_apilado(detalle_df):
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Anio",
+        xaxis_title="Año",
         yaxis_title="Nro. de Expedientes",
         legend_title="Riesgo"
     )
@@ -333,7 +333,7 @@ def grafico_recaudacion_riesgo(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "Anio",
+            "PERIODO": "Año",
             "TOTAL": "Recaudacion (S/)",
             "RIESGO_AGRUPADO": "Riesgo"
         }
@@ -341,7 +341,7 @@ def grafico_recaudacion_riesgo(detalle_df):
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Anio",
+        xaxis_title="Año",
         yaxis_title="Recaudacion (S/)",
         legend_title="Riesgo"
     )
@@ -377,7 +377,7 @@ def grafico_mensual_licencias(detalle_df):
         labels={
             "MES": "Mes",
             "RECAUDACION": "Recaudacion (S/)",
-            "PERIODO": "Anio",
+            "PERIODO": "Año",
         },
     )
     fig.update_traces(texttemplate="S/ %{y:,.2f}", textposition="outside")
@@ -385,7 +385,7 @@ def grafico_mensual_licencias(detalle_df):
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Mes",
         yaxis_title="Recaudacion (S/)",
-        legend_title="Anio",
+        legend_title="Año",
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -423,7 +423,7 @@ def tabla_resumen_anual(resumen_df):
     st.subheader("Tabla Resumen Anual")
 
     tabla_df = resumen_df.copy().rename(columns={
-        "PERIODO": "Anio",
+        "PERIODO": "Año",
         "EXPEDIENTES": "Nro. Expedientes",
         "RECAUDACION": "Recaudacion"
     })
@@ -433,7 +433,7 @@ def tabla_resumen_anual(resumen_df):
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Anio": st.column_config.TextColumn("Anio", width="medium"),
+            "Año": st.column_config.TextColumn("Año", width="medium"),
             "Nro. Expedientes": st.column_config.NumberColumn("Nro. Expedientes", format="%d"),
             "Recaudacion": st.column_config.NumberColumn("Recaudacion", format="S/ %.2f"),
         }
@@ -444,21 +444,21 @@ def tabla_detallada(detalle_df):
     st.subheader("Detalle por Riesgo")
 
     tabla_df = detalle_df.copy().rename(columns={
-        "PERIODO": "Anio",
+        "PERIODO": "Año",
         "RIESGO_DETALLE": "Riesgo",
         "EXPEDIENTES": "Expedientes",
         "COSTO": "Costo",
         "TOTAL": "Total"
     })
 
-    tabla_df = tabla_df[["Anio", "Riesgo", "Expedientes", "Costo", "Total"]]
+    tabla_df = tabla_df[["Año", "Riesgo", "Expedientes", "Costo", "Total"]]
 
     st.dataframe(
         tabla_df,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Anio": st.column_config.TextColumn("Anio", width="small"),
+            "Año": st.column_config.TextColumn("Año", width="small"),
             "Riesgo": st.column_config.TextColumn("Riesgo", width="large"),
             "Expedientes": st.column_config.NumberColumn("Expedientes", format="%d"),
             "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),

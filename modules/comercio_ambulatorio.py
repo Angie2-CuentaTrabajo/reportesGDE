@@ -15,6 +15,8 @@ YEAR_COLORS = {
 }
 
 YEAR_ORDER = ["2023", "2024", "2025", "2026"]
+COSTO_MENSUAL_ESTIMADO = 30.0
+DIA_CORTE_PAGO = 15
 
 MONTH_ORDER = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -213,6 +215,26 @@ def load_comercio_ambulatorio_recaudacion_data():
     df = pd.DataFrame(data)
     df["AÑO"] = pd.Categorical(df["AÑO"], categories=YEAR_ORDER, ordered=True)
     return df
+
+
+def calcular_recaudacion_estimada_vigencia(df):
+    """Estima recaudacion desde el mes de inicio de pago hasta diciembre."""
+    base = df.copy()
+    base["FECHA_EMITIDA"] = pd.to_datetime(base["FECHA_EMITIDA"], errors="coerce")
+    base["TIENE_FECHA"] = base["FECHA_EMITIDA"].notna()
+
+    base["MES_INICIO_PAGO"] = 0
+    con_fecha = base["TIENE_FECHA"]
+    base.loc[con_fecha, "MES_INICIO_PAGO"] = base.loc[con_fecha, "FECHA_EMITIDA"].dt.month
+    base.loc[
+        con_fecha & (base["FECHA_EMITIDA"].dt.day > DIA_CORTE_PAGO),
+        "MES_INICIO_PAGO",
+    ] += 1
+
+    base["MESES_COBRABLES"] = (13 - base["MES_INICIO_PAGO"]).clip(lower=0, upper=12)
+    base.loc[~base["TIENE_FECHA"], "MESES_COBRABLES"] = 0
+    base["RECAUDACION_ESTIMADA"] = base["MESES_COBRABLES"] * COSTO_MENSUAL_ESTIMADO
+    return base
 
 
 def grafico_comparativa_meses(df):
@@ -438,6 +460,127 @@ def tabla_resumen(df):
             "2026": st.column_config.NumberColumn("2026", format="%d"),
             "Total": st.column_config.NumberColumn("Total", format="%d"),
         }
+    )
+
+
+def estadisticas_recaudacion_estimada(df):
+    estimada = calcular_recaudacion_estimada_vigencia(df)
+    total_estimado = float(estimada["RECAUDACION_ESTIMADA"].sum())
+    permisos_calculados = int(estimada["TIENE_FECHA"].sum())
+    permisos_sin_fecha = int((~estimada["TIENE_FECHA"]).sum())
+    promedio_permiso = total_estimado / permisos_calculados if permisos_calculados else 0
+
+    st.subheader("Recaudacion estimada por vigencia")
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Estimacion total", f"S/ {total_estimado:,.2f}")
+    c2.metric("Permisos calculados", f"{permisos_calculados:,}")
+    c3.metric("Promedio por permiso", f"S/ {promedio_permiso:,.2f}")
+    c4.metric("Sin fecha", permisos_sin_fecha)
+
+    st.caption(
+        "Estimacion: si la autorizacion se emite del dia 1 al 15, se cobra desde ese mes; "
+        "si se emite desde el dia 16, se cobra desde el mes siguiente. Costo mensual: S/ 30."
+    )
+
+
+def grafico_recaudacion_estimada_por_ano(df):
+    estimada = calcular_recaudacion_estimada_vigencia(df)
+    anual = (
+        estimada.groupby("AÑO")["RECAUDACION_ESTIMADA"]
+        .sum()
+        .reindex(YEAR_ORDER, fill_value=0)
+        .reset_index()
+    )
+
+    fig = px.bar(
+        anual,
+        x="AÑO",
+        y="RECAUDACION_ESTIMADA",
+        color="AÑO",
+        text="RECAUDACION_ESTIMADA",
+        color_discrete_map=YEAR_COLORS,
+        category_orders={"AÑO": YEAR_ORDER},
+        height=420,
+        labels={"AÑO": "Año", "RECAUDACION_ESTIMADA": "Recaudacion estimada (S/)"},
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.2f}", textposition="outside")
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Año",
+        yaxis_title="Recaudacion estimada (S/)",
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def grafico_recaudacion_estimada_mensual(df):
+    estimada = calcular_recaudacion_estimada_vigencia(df)
+    mensual = (
+        estimada[estimada["TIENE_FECHA"]]
+        .groupby(["AÑO", "MES_NUM", "MES"])
+        .agg(
+            PERMISOS=("FECHA_EMITIDA", "size"),
+            RECAUDACION_ESTIMADA=("RECAUDACION_ESTIMADA", "sum"),
+        )
+        .reset_index()
+        .sort_values(["AÑO", "MES_NUM"])
+    )
+
+    if mensual.empty:
+        return
+
+    fig = px.bar(
+        mensual,
+        x="MES",
+        y="RECAUDACION_ESTIMADA",
+        color="AÑO",
+        barmode="group",
+        text="RECAUDACION_ESTIMADA",
+        color_discrete_map=YEAR_COLORS,
+        category_orders={"MES": MONTH_ORDER, "AÑO": YEAR_ORDER},
+        height=450,
+        labels={
+            "MES": "Mes de emision",
+            "AÑO": "Año",
+            "RECAUDACION_ESTIMADA": "Recaudacion estimada (S/)",
+        },
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes de emision",
+        yaxis_title="Recaudacion estimada (S/)",
+        legend_title="Año",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def tabla_recaudacion_estimada(df):
+    estimada = calcular_recaudacion_estimada_vigencia(df)
+    resumen = (
+        estimada.groupby(["AÑO", "MES_NUM", "MES"])
+        .agg(
+            Permisos=("FECHA_EMITIDA", "size"),
+            Meses_cobrables=("MESES_COBRABLES", "sum"),
+            Recaudacion_estimada=("RECAUDACION_ESTIMADA", "sum"),
+        )
+        .reset_index()
+        .sort_values(["AÑO", "MES_NUM"])
+        .rename(columns={"AÑO": "Año", "MES": "Mes"})
+    )
+    resumen = resumen[["Año", "Mes", "Permisos", "Meses_cobrables", "Recaudacion_estimada"]]
+
+    st.dataframe(
+        resumen,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Año": st.column_config.TextColumn("Año"),
+            "Mes": st.column_config.TextColumn("Mes"),
+            "Permisos": st.column_config.NumberColumn("Permisos", format="%d"),
+            "Meses_cobrables": st.column_config.NumberColumn("Meses cobrables", format="%d"),
+            "Recaudacion_estimada": st.column_config.NumberColumn("Recaudacion estimada", format="S/ %.2f"),
+        },
     )
 
 
@@ -795,6 +938,12 @@ def show_comercio_ambulatorio_module():
     st.markdown("---")
 
     tabla_resumen(df)
+    st.markdown("---")
+
+    estadisticas_recaudacion_estimada(df)
+    grafico_recaudacion_estimada_por_ano(df)
+    grafico_recaudacion_estimada_mensual(df)
+    tabla_recaudacion_estimada(df)
     st.markdown("---")
 
     observaciones(df)

@@ -7,10 +7,10 @@ YEAR_COLORS = {
     "2023": "#e74c3c",
     "2024": "#3498db",
     "2025": "#2ecc71",
-    "2026 (Ene-Feb)": "#f39c12",
+    "2026 (Ene-Abr)": "#f39c12",
 }
 
-YEAR_ORDER = ["2023", "2024", "2025", "2026 (Ene-Feb)"]
+YEAR_ORDER = ["2023", "2024", "2025", "2026 (Ene-Abr)"]
 
 RISK_COLORS = {
     "MEDIO": "#3498db",
@@ -36,11 +36,17 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2025", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 350, "COSTO": 678.90, "TOTAL": 237615.00},
         {"PERIODO": "2025", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 60, "COSTO": 200.90, "TOTAL": 12054.00},
 
-        {"PERIODO": "2026 (Ene-Feb)", "RIESGO_DETALLE": "MEDIO DEL MES DE ENERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 200.90, "TOTAL": 13460.30},
-        {"PERIODO": "2026 (Ene-Feb)", "RIESGO_DETALLE": "MEDIO DEL MES DE FEBRERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 193.20, "TOTAL": 12944.00},
-        {"PERIODO": "2026 (Ene-Feb)", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS DEL MES DE ENERO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 5, "COSTO": 678.90, "TOTAL": 3395.00},
-        {"PERIODO": "2026 (Ene-Feb)", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS DEL MES DE FEBRERO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 5, "COSTO": 678.90, "TOTAL": 3395.00},
-        {"PERIODO": "2026 (Ene-Feb)", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 3, "COSTO": 200.90, "TOTAL": 603.00},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE ENERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 200.90, "TOTAL": 13460.30},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE FEBRERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 193.20, "TOTAL": 12944.00},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE MARZO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 61, "COSTO": 193.20, "TOTAL": 11785.20},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 29, "COSTO": 193.20, "TOTAL": 5602.80},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS DEL MES DE ENERO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 5, "COSTO": 678.90, "TOTAL": 3395.00},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS DEL MES DE FEBRERO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 5, "COSTO": 678.90, "TOTAL": 3395.00},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "ALTO DEL MES DE MARZO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 3, "COSTO": 356.40, "TOTAL": 1069.20},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "ALTO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 1, "COSTO": 356.40, "TOTAL": 356.40},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MUY ALTO DEL MES DE MARZO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 27, "COSTO": 631.20, "TOTAL": 17042.40},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MUY ALTO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 20, "COSTO": 631.20, "TOTAL": 12624.00},
+        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 3, "COSTO": 200.90, "TOTAL": 603.00},
     ]
 
     # Resumen anual según el total consolidado mostrado en tu cuadro
@@ -48,7 +54,7 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2023", "EXPEDIENTES": 850, "RECAUDACION": 314165.00},
         {"PERIODO": "2024", "EXPEDIENTES": 900, "RECAUDACION": 276410.00},
         {"PERIODO": "2025", "EXPEDIENTES": 1010, "RECAUDACION": 370209.00},
-        {"PERIODO": "2026 (Ene-Feb)", "EXPEDIENTES": 147, "RECAUDACION": 33796.00},
+        {"PERIODO": "2026 (Ene-Abr)", "EXPEDIENTES": 288, "RECAUDACION": 82276.00},
     ]
 
     detalle_df = pd.DataFrame(detalle_data)
@@ -274,7 +280,7 @@ def observaciones(resumen_df):
         f"""
 - El periodo con mayor número de expedientes fue **{periodo_max_exp}**.
 - El periodo con mayor recaudación fue **{periodo_max_rec}**.
-- El registro **2026 (Ene-Feb)** corresponde solo a **enero y febrero**.
+- El registro **2026 (Ene-Abr)** corresponde a **enero, febrero, marzo y abril**.
 - Los totales anuales se han consignado según el cuadro consolidado fuente.
 """
     )

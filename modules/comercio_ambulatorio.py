@@ -347,6 +347,55 @@ def grafico_comparativa_por_ano(df):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def grafico_2026_mensual(df):
+    """Vista enfocada en el año actual para autorizaciones emitidas por mes."""
+    if "2026" not in df["AÑO"].astype(str).unique():
+        return
+
+    st.subheader("Autorizaciones 2026 por mes")
+
+    df_2026 = df[df["AÑO"].astype(str) == "2026"].copy()
+    mensual = (
+        df_2026.groupby(["MES_NUM", "MES"])
+        .size()
+        .reset_index(name="AUTORIZACIONES")
+        .sort_values("MES_NUM")
+    )
+    mensual["ACUMULADO"] = mensual["AUTORIZACIONES"].cumsum()
+
+    fig = px.bar(
+        mensual,
+        x="MES",
+        y="AUTORIZACIONES",
+        text="AUTORIZACIONES",
+        color_discrete_sequence=["#f39c12"],
+        category_orders={"MES": [*MONTH_ORDER, "Sin fecha"]},
+        height=420,
+        labels={
+            "MES": "Mes",
+            "AUTORIZACIONES": "Autorizaciones",
+        },
+    )
+    fig.add_scatter(
+        x=mensual["MES"],
+        y=mensual["ACUMULADO"],
+        mode="lines+markers+text",
+        name="Acumulado",
+        text=mensual["ACUMULADO"],
+        textposition="top center",
+        line=dict(color="#0f4c81", width=3),
+    )
+    fig.update_traces(textposition="outside", selector=dict(type="bar"))
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Autorizaciones",
+        legend_title="Serie",
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+
 def tabla_resumen(df):
     """Tabla resumen por mes y año."""
     st.subheader("📋 Tabla Resumen: Autorizaciones por Mes y Año")
@@ -737,6 +786,9 @@ def show_comercio_ambulatorio_module():
     st.markdown("---")
 
     grafico_crecimiento_mensual(df)
+    st.markdown("---")
+
+    grafico_2026_mensual(df)
     st.markdown("---")
 
     grafico_comparativa_por_ano(df)

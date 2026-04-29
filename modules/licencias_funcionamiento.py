@@ -419,6 +419,76 @@ def grafico_mensual_licencias(detalle_df):
     )
 
 
+def grafico_2026_por_mes_y_riesgo(detalle_df):
+    if not {"MES", "MES_NUM", "RIESGO_AGRUPADO"}.issubset(detalle_df.columns):
+        return
+
+    detalle_2026 = detalle_df[detalle_df["PERIODO"].astype(str).str.startswith("2026")].copy()
+    if detalle_2026.empty:
+        return
+
+    st.subheader("Licencias 2026 por mes y riesgo")
+
+    mensual_riesgo = (
+        detalle_2026.groupby(["MES", "MES_NUM", "RIESGO_AGRUPADO"], observed=False)
+        .agg(EXPEDIENTES=("EXPEDIENTES", "sum"), RECAUDACION=("TOTAL", "sum"))
+        .reset_index()
+        .sort_values(["MES_NUM", "RIESGO_AGRUPADO"])
+    )
+
+    fig = px.bar(
+        mensual_riesgo,
+        x="MES",
+        y="EXPEDIENTES",
+        color="RIESGO_AGRUPADO",
+        barmode="stack",
+        text="EXPEDIENTES",
+        category_orders={"MES": MONTH_ORDER, "RIESGO_AGRUPADO": ["MEDIO", "ALTO", "MUY ALTO"]},
+        color_discrete_map=RISK_COLORS,
+        height=450,
+        labels={
+            "MES": "Mes",
+            "EXPEDIENTES": "Expedientes",
+            "RIESGO_AGRUPADO": "Riesgo",
+        },
+    )
+    fig.update_traces(textposition="inside")
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Expedientes",
+        legend_title="Riesgo",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    recaudacion_mensual = (
+        detalle_2026.groupby(["MES", "MES_NUM"], observed=False)["TOTAL"]
+        .sum()
+        .reset_index(name="RECAUDACION")
+        .sort_values("MES_NUM")
+    )
+
+    fig_recaudacion = px.line(
+        recaudacion_mensual,
+        x="MES",
+        y="RECAUDACION",
+        markers=True,
+        text="RECAUDACION",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_sequence=["#0f4c81"],
+        height=380,
+        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)"},
+    )
+    fig_recaudacion.update_traces(texttemplate="S/ %{y:,.2f}", textposition="top center", line=dict(width=3))
+    fig_recaudacion.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Recaudacion (S/)",
+        showlegend=False,
+    )
+    st.plotly_chart(fig_recaudacion, use_container_width=True)
+
+
 def tabla_resumen_anual(resumen_df):
     st.subheader("Tabla Resumen Anual")
 
@@ -519,6 +589,9 @@ def show_licencias_funcionamiento_module():
     st.markdown("---")
 
     grafico_mensual_licencias(detalle_df)
+    st.markdown("---")
+
+    grafico_2026_por_mes_y_riesgo(detalle_df)
     st.markdown("---")
 
     tabla_resumen_anual(resumen_df)

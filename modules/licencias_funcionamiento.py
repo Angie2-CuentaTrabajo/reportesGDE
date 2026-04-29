@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+from utils.google_sheets import get_resoluciones_sheet_or_none, normalize_text, parse_money_series
 
 # Colores por periodo
 YEAR_COLORS = {
@@ -18,9 +19,116 @@ RISK_COLORS = {
     "IMPROCEDENTES": "#95a5a6",
 }
 
+MONTH_ORDER = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+]
+
+MONTH_MAP = {
+    1: "Enero",
+    2: "Febrero",
+    3: "Marzo",
+    4: "Abril",
+    5: "Mayo",
+    6: "Junio",
+    7: "Julio",
+    8: "Agosto",
+    9: "Septiembre",
+    10: "Octubre",
+    11: "Noviembre",
+    12: "Diciembre",
+}
+
+
+def refresh_year_order(resumen_df):
+    global YEAR_ORDER
+    years = sorted(resumen_df["PERIODO"].dropna().astype(str).unique())
+    if years:
+        YEAR_ORDER = years
+        for idx, year in enumerate(YEAR_ORDER):
+            YEAR_COLORS.setdefault(year, px.colors.qualitative.Set2[idx % len(px.colors.qualitative.Set2)])
+
+
+def classify_itse(value):
+    text = normalize_text(value)
+    if "MUY ALTO" in text:
+        return "MUY ALTO", "ALTOS Y MUY ALTOS"
+    if "ALTO" in text:
+        return "ALTO", "ALTOS Y MUY ALTOS"
+    if "MEDIO" in text:
+        return "MEDIO", "MEDIO"
+    return "SIN ITSE", "IMPROCEDENTES"
+
+
+def load_licencias_drive_data():
+    df_raw = get_resoluciones_sheet_or_none()
+    if df_raw is None:
+        return None
+
+    required = {"TIPO DE PROCEDIMIENTO", "FECHA RESOLUCION", "TIPO DE ITSE", "COSTO"}
+    if not required.issubset(df_raw.columns):
+        st.warning("El Sheet no tiene las columnas requeridas para Licencias de Funcionamiento.")
+        return None
+
+    df = df_raw.copy()
+    df["PROCEDIMIENTO_NORMALIZADO"] = df["TIPO DE PROCEDIMIENTO"].map(normalize_text)
+    df = df[
+        df["PROCEDIMIENTO_NORMALIZADO"].isin(
+            ["LICENCIA TEMPORAL", "LICENCIA INDETERMINADA"]
+        )
+    ].copy()
+    if df.empty:
+        return None
+
+    df["FECHA_RESOLUCION"] = pd.to_datetime(
+        df["FECHA RESOLUCION"],
+        dayfirst=True,
+        errors="coerce",
+    )
+    df = df.dropna(subset=["FECHA_RESOLUCION"])
+    if df.empty:
+        return None
+
+    df["COSTO_NUM"] = parse_money_series(df["COSTO"])
+    risk_data = df["TIPO DE ITSE"].apply(classify_itse)
+    df["RIESGO_DETALLE"] = risk_data.apply(lambda item: item[0])
+    df["RIESGO_AGRUPADO"] = risk_data.apply(lambda item: item[1])
+    df["PERIODO"] = df["FECHA_RESOLUCION"].dt.year.astype(str)
+    df["MES_NUM"] = df["FECHA_RESOLUCION"].dt.month
+    df["MES"] = df["MES_NUM"].map(MONTH_MAP)
+
+    detalle_df = (
+        df.groupby(["PERIODO", "MES_NUM", "MES", "RIESGO_DETALLE", "RIESGO_AGRUPADO"])
+        .agg(
+            EXPEDIENTES=("FECHA_RESOLUCION", "size"),
+            COSTO=("COSTO_NUM", "mean"),
+            TOTAL=("COSTO_NUM", "sum"),
+        )
+        .reset_index()
+        .sort_values(["PERIODO", "MES_NUM", "RIESGO_DETALLE"])
+    )
+
+    resumen_df = (
+        df.groupby("PERIODO")
+        .agg(
+            EXPEDIENTES=("FECHA_RESOLUCION", "size"),
+            RECAUDACION=("COSTO_NUM", "sum"),
+        )
+        .reset_index()
+        .sort_values("PERIODO")
+    )
+
+    detalle_df.attrs["source"] = "drive"
+    resumen_df.attrs["source"] = "drive"
+    refresh_year_order(resumen_df)
+    return detalle_df, resumen_df
+
 
 def load_licencias_funcionamiento_data():
     """Carga los datos fijos de Licencias de Funcionamiento."""
+    drive_data = load_licencias_drive_data()
+    if drive_data is not None:
+        return drive_data
 
     # Detalle transcrito del cuadro fuente
     detalle_data = [
@@ -49,7 +157,7 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 3, "COSTO": 200.90, "TOTAL": 603.00},
     ]
 
-    # Resumen anual según el total consolidado mostrado en tu cuadro
+    # Resumen anual segÃºn el total consolidado mostrado en tu cuadro
     resumen_data = [
         {"PERIODO": "2023", "EXPEDIENTES": 850, "RECAUDACION": 314165.00},
         {"PERIODO": "2024", "EXPEDIENTES": 900, "RECAUDACION": 276410.00},
@@ -62,12 +170,14 @@ def load_licencias_funcionamiento_data():
 
     detalle_df["PERIODO"] = pd.Categorical(detalle_df["PERIODO"], categories=YEAR_ORDER, ordered=True)
     resumen_df["PERIODO"] = pd.Categorical(resumen_df["PERIODO"], categories=YEAR_ORDER, ordered=True)
+    detalle_df.attrs["source"] = "local"
+    resumen_df.attrs["source"] = "local"
 
     return detalle_df, resumen_df
 
 
 def estadisticas_generales(resumen_df):
-    st.subheader("📊 Estadísticas Generales")
+    st.subheader("ðŸ“Š EstadÃ­sticas Generales")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -76,14 +186,14 @@ def estadisticas_generales(resumen_df):
     periodo_max = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
     promedio_expedientes = resumen_df["EXPEDIENTES"].mean()
 
-    c1.metric("📁 Total Expedientes", f"{total_expedientes:,}")
-    c2.metric("💰 Recaudación Total", f"S/ {total_recaudado:,.2f}")
-    c3.metric("🏆 Mayor Recaudación", str(periodo_max))
-    c4.metric("📈 Promedio Expedientes", f"{promedio_expedientes:.1f}")
+    c1.metric("ðŸ“ Total Expedientes", f"{total_expedientes:,}")
+    c2.metric("ðŸ’° RecaudaciÃ³n Total", f"S/ {total_recaudado:,.2f}")
+    c3.metric("ðŸ† Mayor RecaudaciÃ³n", str(periodo_max))
+    c4.metric("ðŸ“ˆ Promedio Expedientes", f"{promedio_expedientes:.1f}")
 
 
 def grafico_expedientes(resumen_df):
-    st.subheader("📁 Expedientes por Año")
+    st.subheader("ðŸ“ Expedientes por AÃ±o")
 
     fig = px.bar(
         resumen_df,
@@ -94,13 +204,13 @@ def grafico_expedientes(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Año", "EXPEDIENTES": "N° de Expedientes"}
+        labels={"PERIODO": "AÃ±o", "EXPEDIENTES": "NÂ° de Expedientes"}
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Año",
-        yaxis_title="N° de Expedientes",
+        xaxis_title="AÃ±o",
+        yaxis_title="NÂ° de Expedientes",
         showlegend=False
     )
 
@@ -115,7 +225,7 @@ def grafico_expedientes(resumen_df):
 
 
 def grafico_recaudacion(resumen_df):
-    st.subheader("💰 Recaudación por Año")
+    st.subheader("ðŸ’° RecaudaciÃ³n por AÃ±o")
 
     fig = px.bar(
         resumen_df,
@@ -126,7 +236,7 @@ def grafico_recaudacion(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Año", "RECAUDACION": "Recaudación (S/)"}
+        labels={"PERIODO": "AÃ±o", "RECAUDACION": "RecaudaciÃ³n (S/)"}
     )
 
     fig.update_traces(
@@ -138,8 +248,8 @@ def grafico_recaudacion(resumen_df):
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Año",
-        yaxis_title="Recaudación (S/)",
+        xaxis_title="AÃ±o",
+        yaxis_title="RecaudaciÃ³n (S/)",
         showlegend=False
     )
 
@@ -149,7 +259,7 @@ def grafico_recaudacion(resumen_df):
 
 
 def grafico_riesgo_apilado(detalle_df):
-    st.subheader("📚 Expedientes por Riesgo")
+    st.subheader("ðŸ“š Expedientes por Riesgo")
 
     riesgo_resumen = (
         detalle_df.groupby(["PERIODO", "RIESGO_AGRUPADO"], observed=False)["EXPEDIENTES"]
@@ -167,16 +277,16 @@ def grafico_riesgo_apilado(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "Año",
-            "EXPEDIENTES": "N° de Expedientes",
+            "PERIODO": "AÃ±o",
+            "EXPEDIENTES": "NÂ° de Expedientes",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Año",
-        yaxis_title="N° de Expedientes",
+        xaxis_title="AÃ±o",
+        yaxis_title="NÂ° de Expedientes",
         legend_title="Riesgo"
     )
 
@@ -186,7 +296,7 @@ def grafico_riesgo_apilado(detalle_df):
 
 
 def grafico_recaudacion_riesgo(detalle_df):
-    st.subheader("💳 Recaudación por Riesgo")
+    st.subheader("ðŸ’³ RecaudaciÃ³n por Riesgo")
 
     riesgo_recaudacion = (
         detalle_df.groupby(["PERIODO", "RIESGO_AGRUPADO"], observed=False)["TOTAL"]
@@ -204,16 +314,16 @@ def grafico_recaudacion_riesgo(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "Año",
-            "TOTAL": "Recaudación (S/)",
+            "PERIODO": "AÃ±o",
+            "TOTAL": "RecaudaciÃ³n (S/)",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Año",
-        yaxis_title="Recaudación (S/)",
+        xaxis_title="AÃ±o",
+        yaxis_title="RecaudaciÃ³n (S/)",
         legend_title="Riesgo"
     )
 
@@ -222,13 +332,81 @@ def grafico_recaudacion_riesgo(detalle_df):
     st.plotly_chart(fig, use_container_width=True)
 
 
+def grafico_mensual_licencias(detalle_df):
+    if not {"MES", "MES_NUM"}.issubset(detalle_df.columns):
+        return
+
+    st.subheader("Recaudacion mensual por Licencias")
+
+    mensual = (
+        detalle_df.groupby(["PERIODO", "MES", "MES_NUM"], observed=False)
+        .agg(EXPEDIENTES=("EXPEDIENTES", "sum"), RECAUDACION=("TOTAL", "sum"))
+        .reset_index()
+        .sort_values(["PERIODO", "MES_NUM"])
+    )
+
+    fig = px.bar(
+        mensual,
+        x="MES",
+        y="RECAUDACION",
+        color="PERIODO",
+        barmode="group",
+        text="RECAUDACION",
+        category_orders={"MES": MONTH_ORDER, "PERIODO": YEAR_ORDER},
+        color_discrete_map=YEAR_COLORS,
+        height=450,
+        labels={
+            "MES": "Mes",
+            "RECAUDACION": "Recaudacion (S/)",
+            "PERIODO": "Anio",
+        },
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.2f}", textposition="outside")
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Recaudacion (S/)",
+        legend_title="Anio",
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    tabla = mensual.pivot_table(
+        index=["MES_NUM", "MES"],
+        columns="PERIODO",
+        values="RECAUDACION",
+        aggfunc="sum",
+        fill_value=0,
+    ).reset_index()
+
+    for year in YEAR_ORDER:
+        if year not in tabla.columns:
+            tabla[year] = 0
+
+    tabla["Total"] = tabla[YEAR_ORDER].sum(axis=1)
+    tabla = tabla[["MES", *YEAR_ORDER, "Total"]].rename(columns={"MES": "Mes"})
+
+    st.dataframe(
+        tabla,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Mes": st.column_config.TextColumn("Mes"),
+            **{
+                year: st.column_config.NumberColumn(year, format="S/ %.2f")
+                for year in YEAR_ORDER
+            },
+            "Total": st.column_config.NumberColumn("Total", format="S/ %.2f"),
+        },
+    )
+
+
 def tabla_resumen_anual(resumen_df):
-    st.subheader("📋 Tabla Resumen Anual")
+    st.subheader("ðŸ“‹ Tabla Resumen Anual")
 
     tabla_df = resumen_df.copy().rename(columns={
-        "PERIODO": "Año",
-        "EXPEDIENTES": "N° Expedientes",
-        "RECAUDACION": "Recaudación"
+        "PERIODO": "AÃ±o",
+        "EXPEDIENTES": "NÂ° Expedientes",
+        "RECAUDACION": "RecaudaciÃ³n"
     })
 
     st.dataframe(
@@ -236,32 +414,32 @@ def tabla_resumen_anual(resumen_df):
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Año": st.column_config.TextColumn("Año", width="medium"),
-            "N° Expedientes": st.column_config.NumberColumn("N° Expedientes", format="%d"),
-            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
+            "AÃ±o": st.column_config.TextColumn("AÃ±o", width="medium"),
+            "NÂ° Expedientes": st.column_config.NumberColumn("NÂ° Expedientes", format="%d"),
+            "RecaudaciÃ³n": st.column_config.NumberColumn("RecaudaciÃ³n", format="S/ %.2f"),
         }
     )
 
 
 def tabla_detallada(detalle_df):
-    st.subheader("🧾 Detalle por Riesgo")
+    st.subheader("ðŸ§¾ Detalle por Riesgo")
 
     tabla_df = detalle_df.copy().rename(columns={
-        "PERIODO": "Año",
+        "PERIODO": "AÃ±o",
         "RIESGO_DETALLE": "Riesgo",
         "EXPEDIENTES": "Expedientes",
         "COSTO": "Costo",
         "TOTAL": "Total"
     })
 
-    tabla_df = tabla_df[["Año", "Riesgo", "Expedientes", "Costo", "Total"]]
+    tabla_df = tabla_df[["AÃ±o", "Riesgo", "Expedientes", "Costo", "Total"]]
 
     st.dataframe(
         tabla_df,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Año": st.column_config.TextColumn("Año", width="small"),
+            "AÃ±o": st.column_config.TextColumn("AÃ±o", width="small"),
             "Riesgo": st.column_config.TextColumn("Riesgo", width="large"),
             "Expedientes": st.column_config.NumberColumn("Expedientes", format="%d"),
             "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
@@ -271,23 +449,26 @@ def tabla_detallada(detalle_df):
 
 
 def observaciones(resumen_df):
-    st.subheader("📝 Observaciones")
+    st.subheader("Observaciones")
 
     periodo_max_exp = resumen_df.loc[resumen_df["EXPEDIENTES"].idxmax(), "PERIODO"]
     periodo_max_rec = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
+    texto_fuente = (
+        "- Los datos se actualizan automaticamente desde Google Drive.\n"
+        if resumen_df.attrs.get("source") == "drive"
+        else "- Los totales anuales se han consignado segun el cuadro consolidado fuente.\n"
+    )
 
     st.info(
         f"""
-- El periodo con mayor número de expedientes fue **{periodo_max_exp}**.
-- El periodo con mayor recaudación fue **{periodo_max_rec}**.
-- El registro **2026 (Ene-Abr)** corresponde a **enero, febrero, marzo y abril**.
-- Los totales anuales se han consignado según el cuadro consolidado fuente.
+- El periodo con mayor numero de expedientes fue **{periodo_max_exp}**.
+- El periodo con mayor recaudacion fue **{periodo_max_rec}**.
+{texto_fuente}
 """
     )
 
-
 def show_licencias_funcionamiento_module():
-    st.header("🏢 Módulo de Licencias de Funcionamiento")
+    st.header("ðŸ¢ MÃ³dulo de Licencias de Funcionamiento")
     st.markdown("---")
 
     detalle_df, resumen_df = load_licencias_funcionamiento_data()
@@ -295,6 +476,9 @@ def show_licencias_funcionamiento_module():
     if resumen_df is None or resumen_df.empty:
         st.error("No se pudieron cargar los datos.")
         return
+
+    if resumen_df.attrs.get("source") == "drive":
+        st.success("Datos actualizados desde Google Drive: licencias por fecha de resolucion, tipo de ITSE y costo.")
 
     estadisticas_generales(resumen_df)
     st.markdown("---")
@@ -309,6 +493,9 @@ def show_licencias_funcionamiento_module():
     st.markdown("---")
 
     grafico_recaudacion_riesgo(detalle_df)
+    st.markdown("---")
+
+    grafico_mensual_licencias(detalle_df)
     st.markdown("---")
 
     tabla_resumen_anual(resumen_df)

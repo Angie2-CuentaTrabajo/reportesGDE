@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from pathlib import Path
+from utils.google_sheets import get_resoluciones_sheet_or_none, normalize_text
 
 # Paleta de colores por año
 YEAR_COLORS = {
@@ -40,8 +41,55 @@ def get_spanish_month(month_num):
     return MONTH_MAP.get(month_num, "")
 
 
+def refresh_year_order(df):
+    global YEAR_ORDER
+    years = sorted(df["AÑO"].dropna().astype(str).unique())
+    if years:
+        YEAR_ORDER = years
+        for idx, year in enumerate(YEAR_ORDER):
+            YEAR_COLORS.setdefault(year, px.colors.qualitative.Set2[idx % len(px.colors.qualitative.Set2)])
+
+
+def load_comercio_ambulatorio_drive_data():
+    df_raw = get_resoluciones_sheet_or_none()
+    if df_raw is None:
+        return None
+
+    required = {"TIPO DE PROCEDIMIENTO", "FECHA RESOLUCION"}
+    if not required.issubset(df_raw.columns):
+        st.warning("El Sheet no tiene las columnas requeridas para Comercio Ambulatorio.")
+        return None
+
+    df = df_raw.copy()
+    df["TIPO_NORMALIZADO"] = df["TIPO DE PROCEDIMIENTO"].map(normalize_text)
+    df = df[df["TIPO_NORMALIZADO"] == "COMERCIO AMBULATORIO"].copy()
+    if df.empty:
+        return None
+
+    df["FECHA_EMITIDA"] = pd.to_datetime(
+        df["FECHA RESOLUCION"],
+        dayfirst=True,
+        errors="coerce",
+    )
+    df = df.dropna(subset=["FECHA_EMITIDA"])
+    if df.empty:
+        return None
+
+    df["AÑO"] = df["FECHA_EMITIDA"].dt.year.astype(str)
+    df["MES_NUM"] = df["FECHA_EMITIDA"].dt.month
+    df["MES"] = df["MES_NUM"].map(get_spanish_month)
+    df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
+    df.attrs["source"] = "drive"
+    refresh_year_order(df)
+    return df
+
+
 def load_comercio_ambulatorio_data():
     """Carga y procesa los datos de autorizaciones de comercio ambulatorio."""
+    drive_df = load_comercio_ambulatorio_drive_data()
+    if drive_df is not None and not drive_df.empty:
+        return drive_df
+
     try:
         data_path = Path(__file__).parent.parent / "data" / "comercio_ambulatorio.csv"
 
@@ -102,6 +150,8 @@ def load_comercio_ambulatorio_data():
         df["MES"] = df["MES_NUM"].map(get_spanish_month)
 
         df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
+        df.attrs["source"] = "local"
+        refresh_year_order(df)
 
         return df
 
@@ -626,11 +676,15 @@ def show_comercio_ambulatorio_module():
     with st.spinner("🔍 Cargando datos..."):
         df = load_comercio_ambulatorio_data()
 
-    recaud_df = load_comercio_ambulatorio_recaudacion_data()
-
     if df is None or df.empty:
         st.error("No se pudieron cargar los datos.")
         return
+
+    recaud_df = load_comercio_ambulatorio_recaudacion_data()
+    usa_drive = df.attrs.get("source") == "drive"
+
+    if usa_drive:
+        st.success("Datos actualizados desde Google Drive: autorizaciones emitidas por fecha de resoluciÃ³n.")
 
     estadisticas_generales(df)
     st.markdown("---")
@@ -648,18 +702,19 @@ def show_comercio_ambulatorio_module():
     st.markdown("---")
 
     observaciones(df)
-    st.markdown("---")
+    if not usa_drive:
+        st.markdown("---")
 
-    estadisticas_recaudacion(recaud_df)
-    st.markdown("---")
+        estadisticas_recaudacion(recaud_df)
+        st.markdown("---")
 
-    grafico_recaudacion_por_ano(recaud_df)
-    st.markdown("---")
+        grafico_recaudacion_por_ano(recaud_df)
+        st.markdown("---")
 
-    grafico_permisos_vs_recaudacion(recaud_df)
-    st.markdown("---")
+        grafico_permisos_vs_recaudacion(recaud_df)
+        st.markdown("---")
 
-    tabla_recaudacion(recaud_df)
-    st.markdown("---")
+        tabla_recaudacion(recaud_df)
+        st.markdown("---")
 
-    observaciones_recaudacion(recaud_df)
+        observaciones_recaudacion(recaud_df)

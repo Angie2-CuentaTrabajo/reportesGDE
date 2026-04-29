@@ -41,6 +41,19 @@ def get_spanish_month(month_num):
     return MONTH_MAP.get(month_num, "")
 
 
+def clean_resolution_dates(series):
+    return (
+        series.astype(str)
+        .str.strip()
+        .str.replace("'", "", regex=False)
+        .str.replace(r"/+", "/", regex=True)
+    )
+
+
+def extract_resolution_year(series):
+    return series.astype(str).str.extract(r"(20\d{2})", expand=False)
+
+
 def refresh_year_order(df):
     global YEAR_ORDER
     years = sorted(df["AÑO"].dropna().astype(str).unique())
@@ -66,18 +79,39 @@ def load_comercio_ambulatorio_drive_data():
     if df.empty:
         return None
 
+    fecha_limpia = clean_resolution_dates(df["FECHA RESOLUCION"])
     df["FECHA_EMITIDA"] = pd.to_datetime(
-        df["FECHA RESOLUCION"],
+        fecha_limpia,
         dayfirst=True,
         errors="coerce",
     )
-    df = df.dropna(subset=["FECHA_EMITIDA"])
+    df["ANIO_REFERENCIA"] = pd.to_numeric(df.get("PERIODO"), errors="coerce")
+    df["ANIO_RESOLUCION"] = pd.to_numeric(
+        extract_resolution_year(df.get("RESOLUCION DE SG", "")),
+        errors="coerce",
+    )
+    df["ANIO_CONTEO"] = df["FECHA_EMITIDA"].dt.year
+    df["ANIO_CONTEO"] = df["ANIO_CONTEO"].fillna(df["ANIO_REFERENCIA"]).fillna(df["ANIO_RESOLUCION"])
+
+    mismatch_mask = (
+        df["FECHA_EMITIDA"].notna()
+        & df["ANIO_RESOLUCION"].notna()
+        & (df["FECHA_EMITIDA"].dt.year != df["ANIO_RESOLUCION"])
+    )
+    df.loc[mismatch_mask, "FECHA_EMITIDA"] = df.loc[mismatch_mask].apply(
+        lambda row: row["FECHA_EMITIDA"].replace(year=int(row["ANIO_RESOLUCION"])),
+        axis=1,
+    )
+    df.loc[mismatch_mask, "ANIO_CONTEO"] = df.loc[mismatch_mask, "ANIO_RESOLUCION"]
+
+    df = df.dropna(subset=["ANIO_CONTEO"])
     if df.empty:
         return None
 
-    df["AÑO"] = df["FECHA_EMITIDA"].dt.year.astype(str)
-    df["MES_NUM"] = df["FECHA_EMITIDA"].dt.month
-    df["MES"] = df["MES_NUM"].map(get_spanish_month)
+    df["AÑO"] = df["ANIO_CONTEO"].astype(int).astype(str)
+    df["MES_NUM"] = df["FECHA_EMITIDA"].dt.month.fillna(13).astype(int)
+    df["MES"] = df["MES_NUM"].map(get_spanish_month).fillna("Sin fecha")
+    df.loc[df["MES_NUM"] == 13, "MES"] = "Sin fecha"
     df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
     df.attrs["source"] = "drive"
     refresh_year_order(df)

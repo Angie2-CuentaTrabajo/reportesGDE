@@ -15,8 +15,9 @@ YEAR_ORDER = ["2023", "2024", "2025", "2026 (Ene-Abr)"]
 
 RISK_COLORS = {
     "MEDIO": "#3498db",
+    "ALTO": "#f39c12",
+    "MUY ALTO": "#e74c3c",
     "ALTOS Y MUY ALTOS": "#e74c3c",
-    "IMPROCEDENTES": "#95a5a6",
 }
 
 MONTH_ORDER = [
@@ -52,12 +53,12 @@ def refresh_year_order(resumen_df):
 def classify_itse(value):
     text = normalize_text(value)
     if "MUY ALTO" in text:
-        return "MUY ALTO", "ALTOS Y MUY ALTOS"
+        return "MUY ALTO", "MUY ALTO"
     if "ALTO" in text:
-        return "ALTO", "ALTOS Y MUY ALTOS"
+        return "ALTO", "ALTO"
     if "MEDIO" in text:
         return "MEDIO", "MEDIO"
-    return "SIN ITSE", "IMPROCEDENTES"
+    return None, None
 
 
 def load_licencias_drive_data():
@@ -93,6 +94,10 @@ def load_licencias_drive_data():
     risk_data = df["TIPO DE ITSE"].apply(classify_itse)
     df["RIESGO_DETALLE"] = risk_data.apply(lambda item: item[0])
     df["RIESGO_AGRUPADO"] = risk_data.apply(lambda item: item[1])
+    df = df.dropna(subset=["RIESGO_AGRUPADO"])
+    if df.empty:
+        return None
+
     df["PERIODO"] = df["FECHA_RESOLUCION"].dt.year.astype(str)
     df["MES_NUM"] = df["FECHA_RESOLUCION"].dt.month
     df["MES"] = df["MES_NUM"].map(MONTH_MAP)
@@ -132,15 +137,12 @@ def load_licencias_funcionamiento_data():
     detalle_data = [
         {"PERIODO": "2023", "RIESGO_DETALLE": "MEDIO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 500, "COSTO": 200.90, "TOTAL": 100450.00},
         {"PERIODO": "2023", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 300, "COSTO": 678.90, "TOTAL": 203670.00},
-        {"PERIODO": "2023", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 50, "COSTO": 200.90, "TOTAL": 10045.00},
 
         {"PERIODO": "2024", "RIESGO_DETALLE": "MEDIO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 600, "COSTO": 200.90, "TOTAL": 120540.00},
         {"PERIODO": "2024", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 200, "COSTO": 678.90, "TOTAL": 135780.00},
-        {"PERIODO": "2024", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 100, "COSTO": 200.90, "TOTAL": 20090.00},
 
         {"PERIODO": "2025", "RIESGO_DETALLE": "MEDIO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 600, "COSTO": 200.90, "TOTAL": 120540.00},
         {"PERIODO": "2025", "RIESGO_DETALLE": "ALTOS Y MUY ALTOS", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 350, "COSTO": 678.90, "TOTAL": 237615.00},
-        {"PERIODO": "2025", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 60, "COSTO": 200.90, "TOTAL": 12054.00},
 
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE ENERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 200.90, "TOTAL": 13460.30},
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MEDIO DEL MES DE FEBRERO", "RIESGO_AGRUPADO": "MEDIO", "EXPEDIENTES": 67, "COSTO": 193.20, "TOTAL": 12944.00},
@@ -152,15 +154,14 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "ALTO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 1, "COSTO": 356.40, "TOTAL": 356.40},
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MUY ALTO DEL MES DE MARZO", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 27, "COSTO": 631.20, "TOTAL": 17042.40},
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MUY ALTO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 20, "COSTO": 631.20, "TOTAL": 12624.00},
-        {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 3, "COSTO": 200.90, "TOTAL": 603.00},
     ]
 
     # Resumen anual segun el total consolidado mostrado en tu cuadro
     resumen_data = [
-        {"PERIODO": "2023", "EXPEDIENTES": 850, "RECAUDACION": 314165.00},
-        {"PERIODO": "2024", "EXPEDIENTES": 900, "RECAUDACION": 276410.00},
-        {"PERIODO": "2025", "EXPEDIENTES": 1010, "RECAUDACION": 370209.00},
-        {"PERIODO": "2026 (Ene-Abr)", "EXPEDIENTES": 288, "RECAUDACION": 82276.00},
+        {"PERIODO": "2023", "EXPEDIENTES": 800, "RECAUDACION": 304120.00},
+        {"PERIODO": "2024", "EXPEDIENTES": 800, "RECAUDACION": 256320.00},
+        {"PERIODO": "2025", "EXPEDIENTES": 950, "RECAUDACION": 358155.00},
+        {"PERIODO": "2026 (Ene-Abr)", "EXPEDIENTES": 285, "RECAUDACION": 81673.00},
     ]
 
     detalle_df = pd.DataFrame(detalle_data)

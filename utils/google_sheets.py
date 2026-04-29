@@ -31,7 +31,20 @@ def parse_money_series(series):
         .str.replace(" ", "", regex=False)
         .str.replace(",", ".", regex=False)
     )
-    return pd.to_numeric(values, errors="coerce").fillna(0.0)
+    numeric = pd.to_numeric(values, errors="coerce").fillna(0.0).astype(float)
+    cents_mask = values.str.fullmatch(r"\d+").fillna(False) & (numeric.abs() >= 1000)
+    numeric.loc[cents_mask] = numeric.loc[cents_mask] / 100
+    return numeric
+
+
+def get_secret_value(key):
+    """Read Streamlit secrets while tolerating UTF-8 BOM in local TOML files."""
+    if key in st.secrets:
+        return st.secrets[key]
+    bom_key = f"\ufeff{key}"
+    if bom_key in st.secrets:
+        return st.secrets[bom_key]
+    raise KeyError(key)
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -57,8 +70,8 @@ def load_resoluciones_sheet():
     )
 
     client = gspread.authorize(credentials)
-    sheet_id = st.secrets["GOOGLE_SHEET_ID"]
-    tab_name = st.secrets["GOOGLE_SHEET_TAB"]
+    sheet_id = get_secret_value("GOOGLE_SHEET_ID")
+    tab_name = get_secret_value("GOOGLE_SHEET_TAB")
     try:
         worksheet = client.open_by_key(sheet_id).worksheet(tab_name)
         records = worksheet.get_all_records()

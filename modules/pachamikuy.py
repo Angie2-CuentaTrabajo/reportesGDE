@@ -60,6 +60,8 @@ def load_pachamikuy_data():
         # 2026 -> total 7, solo Mi Pescadería / Pachamikuy / Cerditos Felices
         {"AÑO": "2026", "MES": "Enero",      "Pachamikuy": 1, "Mi Pescadería": 2, "Cerditos Felices": 1, "Festipollo": 0, "De Emprendedores": 0},
         {"AÑO": "2026", "MES": "Febrero",    "Pachamikuy": 1, "Mi Pescadería": 1, "Cerditos Felices": 1, "Festipollo": 0, "De Emprendedores": 0},
+        {"AÑO": "2026", "MES": "Marzo",      "Pachamikuy": 0, "Mi Pescadería": 2, "Cerditos Felices": 2, "Festipollo": 0, "De Emprendedores": 5},
+        {"AÑO": "2026", "MES": "Abril",      "Pachamikuy": 0, "Mi Pescadería": 2, "Cerditos Felices": 2, "Festipollo": 0, "De Emprendedores": 0},
     ]
 
     df = pd.DataFrame(data)

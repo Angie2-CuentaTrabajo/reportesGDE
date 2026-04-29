@@ -127,8 +127,6 @@ def load_licencias_drive_data():
 def load_licencias_funcionamiento_data():
     """Carga los datos fijos de Licencias de Funcionamiento."""
     drive_data = load_licencias_drive_data()
-    if drive_data is not None:
-        return drive_data
 
     # Detalle transcrito del cuadro fuente
     detalle_data = [
@@ -167,6 +165,26 @@ def load_licencias_funcionamiento_data():
 
     detalle_df = pd.DataFrame(detalle_data)
     resumen_df = pd.DataFrame(resumen_data)
+
+    if drive_data is not None:
+        drive_detalle_df, drive_resumen_df = drive_data
+        active_year = drive_resumen_df["PERIODO"].astype(str).str.extract(r"(\d{4})")[0].astype(int).max()
+
+        detalle_years = detalle_df["PERIODO"].astype(str).str.extract(r"(\d{4})")[0].astype(int)
+        resumen_years = resumen_df["PERIODO"].astype(str).str.extract(r"(\d{4})")[0].astype(int)
+
+        detalle_df = pd.concat(
+            [detalle_df[detalle_years < active_year], drive_detalle_df],
+            ignore_index=True,
+        )
+        resumen_df = pd.concat(
+            [resumen_df[resumen_years < active_year], drive_resumen_df],
+            ignore_index=True,
+        )
+        detalle_df.attrs["source"] = "mixed"
+        resumen_df.attrs["source"] = "mixed"
+        refresh_year_order(resumen_df)
+        return detalle_df, resumen_df
 
     detalle_df["PERIODO"] = pd.Categorical(detalle_df["PERIODO"], categories=YEAR_ORDER, ordered=True)
     resumen_df["PERIODO"] = pd.Categorical(resumen_df["PERIODO"], categories=YEAR_ORDER, ordered=True)
@@ -453,11 +471,13 @@ def observaciones(resumen_df):
 
     periodo_max_exp = resumen_df.loc[resumen_df["EXPEDIENTES"].idxmax(), "PERIODO"]
     periodo_max_rec = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
-    texto_fuente = (
-        "- Los datos se actualizan automaticamente desde Google Drive.\n"
-        if resumen_df.attrs.get("source") == "drive"
-        else "- Los totales anuales se han consignado segun el cuadro consolidado fuente.\n"
-    )
+    fuente = resumen_df.attrs.get("source")
+    if fuente == "drive":
+        texto_fuente = "- Los datos se actualizan automaticamente desde Google Drive.\n"
+    elif fuente == "mixed":
+        texto_fuente = "- Se conserva el historico local y el ano actual se actualiza desde Google Drive.\n"
+    else:
+        texto_fuente = "- Los totales anuales se han consignado segun el cuadro consolidado fuente.\n"
 
     st.info(
         f"""
@@ -479,6 +499,8 @@ def show_licencias_funcionamiento_module():
 
     if resumen_df.attrs.get("source") == "drive":
         st.success("Datos actualizados desde Google Drive: licencias por fecha de resolucion, tipo de ITSE y costo.")
+    elif resumen_df.attrs.get("source") == "mixed":
+        st.success("Historico local conservado y ano actual actualizado desde Google Drive.")
 
     estadisticas_generales(resumen_df)
     st.markdown("---")

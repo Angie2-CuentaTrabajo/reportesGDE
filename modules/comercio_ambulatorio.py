@@ -87,8 +87,6 @@ def load_comercio_ambulatorio_drive_data():
 def load_comercio_ambulatorio_data():
     """Carga y procesa los datos de autorizaciones de comercio ambulatorio."""
     drive_df = load_comercio_ambulatorio_drive_data()
-    if drive_df is not None and not drive_df.empty:
-        return drive_df
 
     try:
         data_path = Path(__file__).parent.parent / "data" / "comercio_ambulatorio.csv"
@@ -150,7 +148,16 @@ def load_comercio_ambulatorio_data():
         df["MES"] = df["MES_NUM"].map(get_spanish_month)
 
         df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
-        df.attrs["source"] = "local"
+
+        if drive_df is not None and not drive_df.empty:
+            active_year = drive_df["AÑO"].astype(int).max()
+            historical_df = df[df["AÑO"].astype(int) < active_year].copy()
+            df = pd.concat([historical_df, drive_df], ignore_index=True)
+            df = df.sort_values("FECHA_EMITIDA").reset_index(drop=True)
+            df.attrs["source"] = "mixed"
+        else:
+            df.attrs["source"] = "local"
+
         refresh_year_order(df)
 
         return df
@@ -681,10 +688,13 @@ def show_comercio_ambulatorio_module():
         return
 
     recaud_df = load_comercio_ambulatorio_recaudacion_data()
-    usa_drive = df.attrs.get("source") == "drive"
+    fuente = df.attrs.get("source")
+    usa_drive = fuente in {"drive", "mixed"}
 
-    if usa_drive:
-        st.success("Datos actualizados desde Google Drive: autorizaciones emitidas por fecha de resoluciÃ³n.")
+    if fuente == "mixed":
+        st.success("Historico local conservado y ano actual actualizado desde Google Drive.")
+    elif fuente == "drive":
+        st.success("Datos actualizados desde Google Drive: autorizaciones emitidas por fecha de resolucion.")
 
     estadisticas_generales(df)
     st.markdown("---")

@@ -155,7 +155,7 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "IMPROCEDENTES", "RIESGO_AGRUPADO": "IMPROCEDENTES", "EXPEDIENTES": 3, "COSTO": 200.90, "TOTAL": 603.00},
     ]
 
-    # Resumen anual segÃºn el total consolidado mostrado en tu cuadro
+    # Resumen anual segun el total consolidado mostrado en tu cuadro
     resumen_data = [
         {"PERIODO": "2023", "EXPEDIENTES": 850, "RECAUDACION": 314165.00},
         {"PERIODO": "2024", "EXPEDIENTES": 900, "RECAUDACION": 276410.00},
@@ -195,7 +195,7 @@ def load_licencias_funcionamiento_data():
 
 
 def estadisticas_generales(resumen_df):
-    st.subheader("ðŸ“Š EstadÃ­sticas Generales")
+    st.subheader("Estadisticas Generales")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -204,14 +204,14 @@ def estadisticas_generales(resumen_df):
     periodo_max = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
     promedio_expedientes = resumen_df["EXPEDIENTES"].mean()
 
-    c1.metric("ðŸ“ Total Expedientes", f"{total_expedientes:,}")
-    c2.metric("ðŸ’° RecaudaciÃ³n Total", f"S/ {total_recaudado:,.2f}")
-    c3.metric("ðŸ† Mayor RecaudaciÃ³n", str(periodo_max))
-    c4.metric("ðŸ“ˆ Promedio Expedientes", f"{promedio_expedientes:.1f}")
+    c1.metric("Total Expedientes", f"{total_expedientes:,}")
+    c2.metric("Recaudacion Total", f"S/ {total_recaudado:,.2f}")
+    c3.metric("Mayor Recaudacion", str(periodo_max))
+    c4.metric("Promedio Expedientes", f"{promedio_expedientes:.1f}")
 
 
 def grafico_expedientes(resumen_df):
-    st.subheader("ðŸ“ Expedientes por AÃ±o")
+    st.subheader("Expedientes por Anio")
 
     fig = px.bar(
         resumen_df,
@@ -222,13 +222,13 @@ def grafico_expedientes(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "AÃ±o", "EXPEDIENTES": "NÂ° de Expedientes"}
+        labels={"PERIODO": "Anio", "EXPEDIENTES": "Nro. de Expedientes"}
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="AÃ±o",
-        yaxis_title="NÂ° de Expedientes",
+        xaxis_title="Anio",
+        yaxis_title="Nro. de Expedientes",
         showlegend=False
     )
 
@@ -243,7 +243,7 @@ def grafico_expedientes(resumen_df):
 
 
 def grafico_recaudacion(resumen_df):
-    st.subheader("ðŸ’° RecaudaciÃ³n por AÃ±o")
+    st.subheader("Recaudacion por Anio")
 
     fig = px.bar(
         resumen_df,
@@ -254,7 +254,7 @@ def grafico_recaudacion(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "AÃ±o", "RECAUDACION": "RecaudaciÃ³n (S/)"}
+        labels={"PERIODO": "Anio", "RECAUDACION": "Recaudacion (S/)"}
     )
 
     fig.update_traces(
@@ -266,8 +266,8 @@ def grafico_recaudacion(resumen_df):
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="AÃ±o",
-        yaxis_title="RecaudaciÃ³n (S/)",
+        xaxis_title="Anio",
+        yaxis_title="Recaudacion (S/)",
         showlegend=False
     )
 
@@ -277,7 +277,7 @@ def grafico_recaudacion(resumen_df):
 
 
 def grafico_riesgo_apilado(detalle_df):
-    st.subheader("ðŸ“š Expedientes por Riesgo")
+    st.subheader("Expedientes por Riesgo")
 
     riesgo_resumen = (
         detalle_df.groupby(["PERIODO", "RIESGO_AGRUPADO"], observed=False)["EXPEDIENTES"]
@@ -295,16 +295,16 @@ def grafico_riesgo_apilado(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "AÃ±o",
-            "EXPEDIENTES": "NÂ° de Expedientes",
+            "PERIODO": "Anio",
+            "EXPEDIENTES": "Nro. de Expedientes",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="AÃ±o",
-        yaxis_title="NÂ° de Expedientes",
+        xaxis_title="Anio",
+        yaxis_title="Nro. de Expedientes",
         legend_title="Riesgo"
     )
 
@@ -314,7 +314,7 @@ def grafico_riesgo_apilado(detalle_df):
 
 
 def grafico_recaudacion_riesgo(detalle_df):
-    st.subheader("ðŸ’³ RecaudaciÃ³n por Riesgo")
+    st.subheader("Recaudacion por Riesgo")
 
     riesgo_recaudacion = (
         detalle_df.groupby(["PERIODO", "RIESGO_AGRUPADO"], observed=False)["TOTAL"]
@@ -332,16 +332,16 @@ def grafico_recaudacion_riesgo(detalle_df):
         color_discrete_map=RISK_COLORS,
         height=450,
         labels={
-            "PERIODO": "AÃ±o",
-            "TOTAL": "RecaudaciÃ³n (S/)",
+            "PERIODO": "Anio",
+            "TOTAL": "Recaudacion (S/)",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="AÃ±o",
-        yaxis_title="RecaudaciÃ³n (S/)",
+        xaxis_title="Anio",
+        yaxis_title="Recaudacion (S/)",
         legend_title="Riesgo"
     )
 
@@ -419,12 +419,12 @@ def grafico_mensual_licencias(detalle_df):
 
 
 def tabla_resumen_anual(resumen_df):
-    st.subheader("ðŸ“‹ Tabla Resumen Anual")
+    st.subheader("Tabla Resumen Anual")
 
     tabla_df = resumen_df.copy().rename(columns={
-        "PERIODO": "AÃ±o",
-        "EXPEDIENTES": "NÂ° Expedientes",
-        "RECAUDACION": "RecaudaciÃ³n"
+        "PERIODO": "Anio",
+        "EXPEDIENTES": "Nro. Expedientes",
+        "RECAUDACION": "Recaudacion"
     })
 
     st.dataframe(
@@ -432,32 +432,32 @@ def tabla_resumen_anual(resumen_df):
         use_container_width=True,
         hide_index=True,
         column_config={
-            "AÃ±o": st.column_config.TextColumn("AÃ±o", width="medium"),
-            "NÂ° Expedientes": st.column_config.NumberColumn("NÂ° Expedientes", format="%d"),
-            "RecaudaciÃ³n": st.column_config.NumberColumn("RecaudaciÃ³n", format="S/ %.2f"),
+            "Anio": st.column_config.TextColumn("Anio", width="medium"),
+            "Nro. Expedientes": st.column_config.NumberColumn("Nro. Expedientes", format="%d"),
+            "Recaudacion": st.column_config.NumberColumn("Recaudacion", format="S/ %.2f"),
         }
     )
 
 
 def tabla_detallada(detalle_df):
-    st.subheader("ðŸ§¾ Detalle por Riesgo")
+    st.subheader("Detalle por Riesgo")
 
     tabla_df = detalle_df.copy().rename(columns={
-        "PERIODO": "AÃ±o",
+        "PERIODO": "Anio",
         "RIESGO_DETALLE": "Riesgo",
         "EXPEDIENTES": "Expedientes",
         "COSTO": "Costo",
         "TOTAL": "Total"
     })
 
-    tabla_df = tabla_df[["AÃ±o", "Riesgo", "Expedientes", "Costo", "Total"]]
+    tabla_df = tabla_df[["Anio", "Riesgo", "Expedientes", "Costo", "Total"]]
 
     st.dataframe(
         tabla_df,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "AÃ±o": st.column_config.TextColumn("AÃ±o", width="small"),
+            "Anio": st.column_config.TextColumn("Anio", width="small"),
             "Riesgo": st.column_config.TextColumn("Riesgo", width="large"),
             "Expedientes": st.column_config.NumberColumn("Expedientes", format="%d"),
             "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
@@ -488,7 +488,7 @@ def observaciones(resumen_df):
     )
 
 def show_licencias_funcionamiento_module():
-    st.header("ðŸ¢ MÃ³dulo de Licencias de Funcionamiento")
+    st.header("Modulo de Licencias de Funcionamiento")
     st.markdown("---")
 
     detalle_df, resumen_df = load_licencias_funcionamiento_data()

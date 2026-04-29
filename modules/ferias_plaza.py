@@ -5,6 +5,10 @@ from pathlib import Path
 from utils.helpers import get_spanish_month
 
 COLOR_MAP = px.colors.qualitative.Set3
+MESES_PLAZA = [
+    'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+    'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+]
 
 def cargar_datos_ferias_plaza(anio):
     archivo = Path(__file__).parent.parent / 'data' / 'ferias' / f'{anio}_ferias_manchay.csv'
@@ -13,18 +17,13 @@ def cargar_datos_ferias_plaza(anio):
 
     df = pd.read_csv(archivo, sep=';', encoding='utf-8')
 
-    meses = [
-        'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
-        'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
-    ]
-
     registros = []
     for _, row in df.iterrows():
         feria = f"Plaza Cívica {anio}"
         macro = str(row.get('GIRO', 'OTROS')).strip().upper()
         nombre = str(row.get('NOMBRES Y APELLIDOS', '')).strip().upper()
 
-        for mes_num, mes in enumerate(meses, start=1):
+        for mes_num, mes in enumerate(MESES_PLAZA, start=1):
             monto = row.get(mes)
             if pd.notna(monto):
                 try:
@@ -116,65 +115,70 @@ def grafico_trend_mensual(df):
     fig.update_layout(xaxis_title="Mes", yaxis_title="Cantidad de Inscripciones")
     st.plotly_chart(fig, use_container_width=True)
 
-def grafico_estado_pago_comparado(df):
-    st.subheader("📊 Estado de Pago Detallado por Año")
-
-    def clasificar_estado_pago(row, meses_validos):
-        pagos = pd.to_numeric(row[meses_validos], errors='coerce').fillna(0) > 0
-        total = len(meses_validos)
-        cantidad = pagos.sum()
-        porcentaje = cantidad / total
-
-        if cantidad == 0:
-            return "No Pagó"
-        elif porcentaje == 1:
-            return "Pagó Todo"
-        elif porcentaje >= 0.8:
-            return "Pagó Casi Todo"
-        elif porcentaje >= 0.3:
-            return "Pagó Parcial"
-        else:
-            return "Pagó Muy Poco"
+def grafico_recaudacion_mensual_comparada():
+    st.subheader("Recaudacion mensual por anio")
 
     path_base = Path(__file__).parent.parent / "data" / "ferias"
-    df_2024 = pd.read_csv(path_base / "2024_ferias_manchay.csv", sep=";", encoding="utf-8")
-    df_2025 = pd.read_csv(path_base / "2025_ferias_manchay.csv", sep=";", encoding="utf-8")
+    registros = []
 
-    meses_2024 = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']
-    meses_2025 = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']
+    for anio in ["2024", "2025"]:
+        archivo = path_base / f"{anio}_ferias_manchay.csv"
+        if not archivo.exists():
+            continue
 
-    df_2025['PARTICIPANTE'] = df_2025[meses_2025].apply(lambda x: any(pd.to_numeric(x, errors='coerce').fillna(0) > 0), axis=1)
-    df_2025 = df_2025[df_2025['PARTICIPANTE']].copy()
+        df = pd.read_csv(archivo, sep=";", encoding="utf-8")
+        for mes_num, mes in enumerate(MESES_PLAZA, start=1):
+            monto = (
+                pd.to_numeric(df[mes], errors="coerce").fillna(0).sum()
+                if mes in df.columns
+                else 0
+            )
+            registros.append({
+                "ANIO": anio,
+                "MES": get_spanish_month(mes_num),
+                "MES_NUM": mes_num,
+                "RECAUDACION": float(monto),
+            })
 
-    df_2024['ESTADO'] = df_2024.apply(lambda r: clasificar_estado_pago(r, meses_2024), axis=1)
-    df_2025['ESTADO'] = df_2025.apply(lambda r: clasificar_estado_pago(r, meses_2025), axis=1)
+    if not registros:
+        st.info("No hay datos de recaudacion mensual para mostrar.")
+        return
 
-    df_2024['AÑO'] = '2024'
-    df_2025['AÑO'] = '2025'
+    resumen = pd.DataFrame(registros)
+    meses_orden = [get_spanish_month(i) for i in range(1, 13)]
 
-    df_total = pd.concat([df_2024[['ESTADO', 'AÑO']], df_2025[['ESTADO', 'AÑO']]], ignore_index=True)
-    resumen = df_total.groupby(['AÑO', 'ESTADO']).size().reset_index(name='CANTIDAD')
-
-    ESTADO_COLORES = {
-        "Pagó Todo": "#2ecc71",
-        "Pagó Casi Todo": "#3498db",
-        "Pagó Parcial": "#f1c40f",
-        "Pagó Muy Poco": "#e67e22",
-        "No Pagó": "#e74c3c"
-    }
-
-    fig = px.bar(resumen, x='AÑO', y='CANTIDAD', color='ESTADO', text='CANTIDAD', color_discrete_map=ESTADO_COLORES, barmode='group')
-    fig.update_layout(xaxis_title="Año", yaxis_title="Cantidad de Participantes", legend_title="Estado de Pago")
+    fig = px.bar(
+        resumen,
+        x="MES",
+        y="RECAUDACION",
+        color="ANIO",
+        barmode="group",
+        text="RECAUDACION",
+        category_orders={"MES": meses_orden},
+        color_discrete_sequence=COLOR_MAP,
+        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)", "ANIO": "Anio"},
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
+    fig.update_layout(xaxis_title="Mes", yaxis_title="Recaudacion (S/)", legend_title="Anio")
     st.plotly_chart(fig, use_container_width=True)
 
-    st.caption("""
-    **Leyenda de Categorías:**
-    - 🟢 **Pagó Todo**: Pagó todos los meses disponibles del año.
-    - 🔵 **Pagó Casi Todo**: Pagó al menos el 80% de los meses.
-    - 🟡 **Pagó Parcial**: Pagó entre el 30% y 79% de los meses.
-    - 🟠 **Pagó Muy Poco**: Solo pagó 1 o 2 veces en todo el año.
-    - 🔴 **No Pagó**: No realizó ningún pago.
-    """)
+    tabla = resumen.pivot(index="MES", columns="ANIO", values="RECAUDACION").reset_index()
+    tabla["MES_NUM"] = tabla["MES"].map({mes: idx for idx, mes in enumerate(meses_orden, start=1)})
+    tabla = tabla.sort_values("MES_NUM").drop(columns=["MES_NUM"])
+    tabla["TOTAL"] = tabla[[col for col in ["2024", "2025"] if col in tabla.columns]].sum(axis=1)
+
+    st.dataframe(
+        tabla,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "MES": st.column_config.TextColumn("Mes"),
+            "2024": st.column_config.NumberColumn("2024", format="S/ %.2f"),
+            "2025": st.column_config.NumberColumn("2025", format="S/ %.2f"),
+            "TOTAL": st.column_config.NumberColumn("Total", format="S/ %.2f"),
+        },
+    )
+
 
 def show_ferias_plaza_module():
     st.header("Ferias de la Plaza Cívica")
@@ -227,4 +231,4 @@ def show_ferias_plaza_module():
     st.markdown('---')
     grafico_trend_mensual(df)
     st.markdown('---')
-    grafico_estado_pago_comparado(df)
+    grafico_recaudacion_mensual_comparada()

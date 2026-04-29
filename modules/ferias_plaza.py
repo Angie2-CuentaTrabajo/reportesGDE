@@ -24,7 +24,7 @@ def cargar_datos_ferias_plaza(anio):
         macro = str(row.get('GIRO', 'OTROS')).strip().upper()
         nombre = str(row.get('NOMBRES Y APELLIDOS', '')).strip().upper()
 
-        for mes in meses:
+        for mes_num, mes in enumerate(meses, start=1):
             monto = row.get(mes)
             if pd.notna(monto):
                 try:
@@ -33,7 +33,7 @@ def cargar_datos_ferias_plaza(anio):
                 except:
                     continue
 
-                ingreso = pd.to_datetime(f"01-{mes}-{anio}", dayfirst=True, errors='coerce')
+                ingreso = pd.Timestamp(year=int(anio), month=mes_num, day=1)
                 registros.append({
                     'FERIA': feria,
                     'MACRO_CATEGORIA': macro,
@@ -141,7 +141,7 @@ def grafico_estado_pago_comparado(df):
     df_2025 = pd.read_csv(path_base / "2025_ferias_manchay.csv", sep=";", encoding="utf-8")
 
     meses_2024 = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']
-    meses_2025 = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO']
+    meses_2025 = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE']
 
     df_2025['PARTICIPANTE'] = df_2025[meses_2025].apply(lambda x: any(pd.to_numeric(x, errors='coerce').fillna(0) > 0), axis=1)
     df_2025 = df_2025[df_2025['PARTICIPANTE']].copy()
@@ -209,10 +209,11 @@ def show_ferias_plaza_module():
         return
 
     participantes_unicos = df[df['MONTO'] > 0][['FERIA', 'NOMBRES Y APELLIDOS']].drop_duplicates()
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     c1.metric('📆 Ferias', df['FERIA'].nunique())
     c2.metric('👥 Participantes', len(participantes_unicos))
     c3.metric('🏷️ Categorías', df['MACRO_CATEGORIA'].nunique())
+    c4.metric('Recaudacion', f"S/ {df['MONTO'].sum():,.2f}")
 
     st.markdown('---')
     cA, cB = st.columns(2)

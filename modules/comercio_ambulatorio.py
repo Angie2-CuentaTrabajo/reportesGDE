@@ -209,7 +209,7 @@ def load_comercio_ambulatorio_recaudacion_data():
         {"AÑO": "2023", "PERMISOS": 398, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 143280.0},
         {"AÑO": "2024", "PERMISOS": 183, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 65880.0},
         {"AÑO": "2025", "PERMISOS": 125, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 45000.0},
-        {"AÑO": "2026", "PERMISOS": 37, "MESES": 3, "COSTO": 30.0, "TOTAL_RECAUDADO": 8040.0},
+        {"AÑO": "2026", "PERMISOS": 66, "MESES": 4, "COSTO": 30.0, "TOTAL_RECAUDADO": 18840.0},
     ]
 
     df = pd.DataFrame(data)

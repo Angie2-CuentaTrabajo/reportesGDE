@@ -1,5 +1,6 @@
 import streamlit as st
 import plotly.io as pio
+from utils.helpers import install_excel_dataframe_download
 
 from modules.anuncios_publicitarios import show_anuncios_publicitarios_module
 from modules.comercio_ambulatorio import show_comercio_ambulatorio_module
@@ -18,6 +19,7 @@ st.set_page_config(
 )
 
 pio.templates.default = "plotly_white"
+install_excel_dataframe_download(st)
 
 MODULES = {
     "PACHAMIKUY": {

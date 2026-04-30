@@ -38,6 +38,20 @@ FERIAS_MACRO_MANUALES = {
             "PARTICIPANTES": 18,
             "MONTO_TOTAL": 1080.0,
         },
+        {
+            "FERIA": "Año Nuevo 2025",
+            "INGRESO": "2025-12-31",
+            "MACRO_CATEGORIA": "ARTESANIA",
+            "PARTICIPANTES": 279,
+            "MONTO_TOTAL": 16740.0,
+        },
+        {
+            "FERIA": "Año Nuevo 2025",
+            "INGRESO": "2025-12-31",
+            "MACRO_CATEGORIA": "GASTRONOMIA",
+            "PARTICIPANTES": 1,
+            "MONTO_TOTAL": 30.0,
+        },
     ],
 }
 

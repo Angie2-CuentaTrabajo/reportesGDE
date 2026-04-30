@@ -14,6 +14,36 @@ MESES_PLAZA = [
 ARCHIVO_PLAZA_CONSOLIDADO = "COMERCIO AMBULATORIO - BD - FERIANTES DE LA PLAZA CÍVICA (1).csv"
 
 
+def cargar_ferias_plaza_manuales():
+    registros = []
+    feria = "Feria Escolar 2026"
+
+    for idx in range(1, 29):
+        registros.append({
+            "FERIA": feria,
+            "MACRO_CATEGORIA": "FERIA ESCOLAR",
+            "NOMBRES Y APELLIDOS": f"FERIA ESCOLAR PARTICIPANTE {idx:02d}",
+            "MONTO": 720.0,
+            "PAGO": "SI",
+            "INGRESO": pd.Timestamp(year=2026, month=3, day=1),
+        })
+
+    for idx in range(1, 9):
+        registros.append({
+            "FERIA": feria,
+            "MACRO_CATEGORIA": "FERIA ESCOLAR",
+            "NOMBRES Y APELLIDOS": f"FERIA ESCOLAR PARTICIPANTE {idx:02d}",
+            "MONTO": 140.0,
+            "PAGO": "SI",
+            "INGRESO": pd.Timestamp(year=2026, month=4, day=15),
+        })
+
+    df = pd.DataFrame(registros)
+    df["AÑO"] = "2026"
+    df["MES"] = df["INGRESO"].dt.month.map(get_spanish_month)
+    return df
+
+
 def normalizar_texto(valor):
     texto = str(valor or "").strip().upper()
     texto = unicodedata.normalize("NFKD", texto)
@@ -85,7 +115,7 @@ def cargar_datos_ferias_plaza_consolidado():
 
     df_final = pd.DataFrame(registros)
     df_final["MES"] = df_final["INGRESO"].dt.month.map(get_spanish_month)
-    return df_final
+    return pd.concat([df_final, cargar_ferias_plaza_manuales()], ignore_index=True)
 
 def cargar_datos_ferias_plaza(anio):
     df_consolidado = cargar_datos_ferias_plaza_consolidado()

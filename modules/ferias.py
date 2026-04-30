@@ -8,6 +8,45 @@ from modules.ferias_plaza import show_ferias_plaza_module
 # Paleta de colores
 COLOR_MAP = px.colors.qualitative.Set3
 
+FERIAS_MACRO_MANUALES = {
+    "2025": [
+        {
+            "FERIA": "Navidad 2025",
+            "INGRESO": "2025-12-24",
+            "MACRO_CATEGORIA": "ARTESANIA",
+            "PARTICIPANTES": 405,
+            "MONTO_TOTAL": 16200.0,
+        },
+        {
+            "FERIA": "Navidad 2025",
+            "INGRESO": "2025-12-24",
+            "MACRO_CATEGORIA": "GASTRONOMIA",
+            "PARTICIPANTES": 18,
+            "MONTO_TOTAL": 1080.0,
+        },
+    ],
+}
+
+
+def agregar_ferias_macro_manuales(df, year):
+    registros = FERIAS_MACRO_MANUALES.get(str(year), [])
+    if not registros:
+        return df
+
+    filas = []
+    for registro in registros:
+        monto_unitario = registro["MONTO_TOTAL"] / registro["PARTICIPANTES"]
+        for _ in range(registro["PARTICIPANTES"]):
+            filas.append({
+                "FERIA": registro["FERIA"],
+                "INGRESO": pd.to_datetime(registro["INGRESO"]),
+                "MES": get_spanish_month(pd.to_datetime(registro["INGRESO"]).month),
+                "MACRO_CATEGORIA": registro["MACRO_CATEGORIA"],
+                "MONTO": monto_unitario,
+            })
+
+    return pd.concat([df, pd.DataFrame(filas)], ignore_index=True)
+
 
 def load_ferias_data(year):
     archivo = Path(__file__).parent.parent / "data" / "ferias" / f"{year}_ferias_macro.csv"
@@ -22,7 +61,7 @@ def load_ferias_data(year):
         df['INGRESO'] = pd.to_datetime(df['FECHA DE INGRESO'], dayfirst=True, errors='coerce')
 
     df['MES'] = df['INGRESO'].dt.month.map(get_spanish_month)
-    return df
+    return agregar_ferias_macro_manuales(df, year)
 
 
 def show_ferias_module():

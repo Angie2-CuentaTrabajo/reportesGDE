@@ -1,6 +1,8 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import re
+import unicodedata
 from pathlib import Path
 from utils.helpers import get_spanish_month
 
@@ -9,8 +11,87 @@ MESES_PLAZA = [
     'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
     'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
 ]
+ARCHIVO_PLAZA_CONSOLIDADO = "COMERCIO AMBULATORIO - BD - FERIANTES DE LA PLAZA CÍVICA (1).csv"
+
+
+def normalizar_texto(valor):
+    texto = str(valor or "").strip().upper()
+    texto = unicodedata.normalize("NFKD", texto)
+    texto = "".join(char for char in texto if not unicodedata.combining(char))
+    return texto
+
+
+def normalizar_mes(valor):
+    texto = normalizar_texto(valor).split(".")[0]
+    if texto == "SETIEMBRE":
+        texto = "SEPTIEMBRE"
+    return texto
+
+
+def sumar_montos(valor):
+    texto = str(valor or "").strip()
+    numeros = re.findall(r"\d+(?:[.,]\d+)?", texto)
+    if not numeros:
+        return 0.0
+    return sum(float(numero.replace(",", ".")) for numero in numeros)
+
+
+def cargar_datos_ferias_plaza_consolidado():
+    archivo = Path(__file__).parent.parent / "data" / "ferias" / ARCHIVO_PLAZA_CONSOLIDADO
+    if not archivo.exists():
+        return pd.DataFrame()
+
+    df = pd.read_csv(archivo, sep=",", encoding="utf-8-sig", dtype=str)
+    if df.empty:
+        return pd.DataFrame()
+
+    registros = []
+    anio = 2024
+    mes_anterior = 0
+
+    # Despues de las 4 columnas base, el archivo alterna MONTO y N DE RECIBO.
+    columnas_monto = list(df.columns[4::2])
+    for columna in columnas_monto:
+        mes = normalizar_mes(columna)
+        if mes not in MESES_PLAZA:
+            continue
+
+        mes_num = MESES_PLAZA.index(mes) + 1
+        if mes_anterior and mes_num <= mes_anterior:
+            anio += 1
+        mes_anterior = mes_num
+
+        for _, row in df.iterrows():
+            monto = sumar_montos(row.get(columna))
+            if monto <= 0:
+                continue
+
+            nombre = str(row.get("NOMBRES Y APELLIDOS", "")).strip().upper()
+            if not nombre:
+                continue
+
+            registros.append({
+                "FERIA": f"Plaza Cívica {anio}",
+                "MACRO_CATEGORIA": str(row.get("GIRO", "OTROS")).strip().upper(),
+                "NOMBRES Y APELLIDOS": nombre,
+                "MONTO": monto,
+                "PAGO": "SI",
+                "INGRESO": pd.Timestamp(year=anio, month=mes_num, day=1),
+                "AÑO": str(anio),
+            })
+
+    if not registros:
+        return pd.DataFrame()
+
+    df_final = pd.DataFrame(registros)
+    df_final["MES"] = df_final["INGRESO"].dt.month.map(get_spanish_month)
+    return df_final
 
 def cargar_datos_ferias_plaza(anio):
+    df_consolidado = cargar_datos_ferias_plaza_consolidado()
+    if not df_consolidado.empty:
+        return df_consolidado[df_consolidado["AÑO"] == str(anio)].copy()
+
     archivo = Path(__file__).parent.parent / 'data' / 'ferias' / f'{anio}_ferias_manchay.csv'
     if not archivo.exists():
         return pd.DataFrame()
@@ -178,6 +259,59 @@ def grafico_recaudacion_mensual_comparada():
             "TOTAL": st.column_config.NumberColumn("Total", format="S/ %.2f"),
         },
     )
+def grafico_recaudacion_mensual_comparada():
+    st.subheader("Recaudacion mensual por aÃ±o")
+
+    consolidado = cargar_datos_ferias_plaza_consolidado()
+    if consolidado.empty:
+        st.info("No hay datos de recaudacion mensual para mostrar.")
+        return
+
+    resumen = (
+        consolidado.assign(
+            ANIO=consolidado["AÑO"].astype(str),
+            MES_NUM=consolidado["INGRESO"].dt.month,
+        )
+        .groupby(["ANIO", "MES_NUM"])["MONTO"]
+        .sum()
+        .reset_index(name="RECAUDACION")
+    )
+    resumen["MES"] = resumen["MES_NUM"].map(get_spanish_month)
+    meses_orden = [get_spanish_month(i) for i in range(1, 13)]
+
+    fig = px.bar(
+        resumen,
+        x="MES",
+        y="RECAUDACION",
+        color="ANIO",
+        barmode="group",
+        text="RECAUDACION",
+        category_orders={"MES": meses_orden},
+        color_discrete_sequence=COLOR_MAP,
+        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)", "ANIO": "AÃ±o"},
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
+    fig.update_layout(xaxis_title="Mes", yaxis_title="Recaudacion (S/)", legend_title="AÃ±o")
+    st.plotly_chart(fig, use_container_width=True)
+
+    tabla = resumen.pivot(index="MES", columns="ANIO", values="RECAUDACION").reset_index()
+    tabla["MES_NUM"] = tabla["MES"].map({mes: idx for idx, mes in enumerate(meses_orden, start=1)})
+    tabla = tabla.sort_values("MES_NUM").drop(columns=["MES_NUM"])
+    anios_tabla = [col for col in ["2024", "2025", "2026"] if col in tabla.columns]
+    tabla["TOTAL"] = tabla[anios_tabla].sum(axis=1)
+
+    st.dataframe(
+        tabla,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "MES": st.column_config.TextColumn("Mes"),
+            "2024": st.column_config.NumberColumn("2024", format="S/ %.2f"),
+            "2025": st.column_config.NumberColumn("2025", format="S/ %.2f"),
+            "2026": st.column_config.NumberColumn("2026", format="S/ %.2f"),
+            "TOTAL": st.column_config.NumberColumn("Total", format="S/ %.2f"),
+        },
+    )
 
 
 def show_ferias_plaza_module():
@@ -186,11 +320,13 @@ def show_ferias_plaza_module():
 
     if 'year_sel_plaza' not in st.session_state:
         st.session_state.year_sel_plaza = '2025'
-    cols = st.columns(3)
+    cols = st.columns(4)
     if cols[0].button('2024', key="btn_2024_plaza"):
         st.session_state.year_sel_plaza = '2024'
     if cols[1].button('2025', key="btn_2025_plaza"):
         st.session_state.year_sel_plaza = '2025'
+    if cols[3].button('2026', key="btn_2026_plaza"):
+        st.session_state.year_sel_plaza = '2026'
     if cols[2].button('Ambos Años', key="btn_hist_plaza"):
         st.session_state.year_sel_plaza = 'Histórico'
 
@@ -199,7 +335,7 @@ def show_ferias_plaza_module():
 
     if year == 'Histórico':
         dfs = []
-        for y in ['2024', '2025']:
+        for y in ['2024', '2025', '2026']:
             d = cargar_datos_ferias_plaza(y)
             if not d.empty:
                 d['AÑO'] = y

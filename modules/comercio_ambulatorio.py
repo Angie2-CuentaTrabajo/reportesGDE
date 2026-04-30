@@ -209,7 +209,7 @@ def load_comercio_ambulatorio_recaudacion_data():
         {"AÑO": "2023", "PERMISOS": 398, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 143280.0},
         {"AÑO": "2024", "PERMISOS": 183, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 65880.0},
         {"AÑO": "2025", "PERMISOS": 125, "MESES": 12, "COSTO": 30.0, "TOTAL_RECAUDADO": 45000.0},
-        {"AÑO": "2026", "PERMISOS": 66, "MESES": 4, "COSTO": 30.0, "TOTAL_RECAUDADO": 18840.0},
+        {"AÑO": "2026", "PERMISOS": 66, "MESES": 4, "COSTO": 30.0, "TOTAL_RECAUDADO": 4350.0},
     ]
 
     df = pd.DataFrame(data)
@@ -218,7 +218,7 @@ def load_comercio_ambulatorio_recaudacion_data():
 
 
 def calcular_recaudacion_estimada_vigencia(df):
-    """Estima recaudacion desde el mes de inicio de pago hasta diciembre."""
+    """Estima recaudacion desde el mes de emision hasta el cierre aplicable."""
     base = df.copy()
     base["FECHA_EMITIDA"] = pd.to_datetime(base["FECHA_EMITIDA"], errors="coerce")
     base["TIENE_FECHA"] = base["FECHA_EMITIDA"].notna()
@@ -226,12 +226,17 @@ def calcular_recaudacion_estimada_vigencia(df):
     base["MES_INICIO_PAGO"] = 0
     con_fecha = base["TIENE_FECHA"]
     base.loc[con_fecha, "MES_INICIO_PAGO"] = base.loc[con_fecha, "FECHA_EMITIDA"].dt.month
-    base.loc[
-        con_fecha & (base["FECHA_EMITIDA"].dt.day > DIA_CORTE_PAGO),
-        "MES_INICIO_PAGO",
-    ] += 1
 
-    base["MESES_COBRABLES"] = (13 - base["MES_INICIO_PAGO"]).clip(lower=0, upper=12)
+    hoy = pd.Timestamp.today()
+    anio_actual = hoy.year
+    mes_actual = hoy.month
+    anio_emision = base["FECHA_EMITIDA"].dt.year
+
+    base["MES_FIN_PAGO"] = 12
+    base.loc[anio_emision == anio_actual, "MES_FIN_PAGO"] = mes_actual
+    base.loc[anio_emision > anio_actual, "MES_FIN_PAGO"] = 0
+
+    base["MESES_COBRABLES"] = (base["MES_FIN_PAGO"] - base["MES_INICIO_PAGO"] + 1).clip(lower=0, upper=12)
     base.loc[~base["TIENE_FECHA"], "MESES_COBRABLES"] = 0
     base["RECAUDACION_ESTIMADA"] = base["MESES_COBRABLES"] * COSTO_MENSUAL_ESTIMADO
     return base
@@ -478,8 +483,8 @@ def estadisticas_recaudacion_estimada(df):
     c4.metric("Sin fecha", permisos_sin_fecha)
 
     st.caption(
-        "Estimacion: si la autorizacion se emite del dia 1 al 15, se cobra desde ese mes; "
-        "si se emite desde el dia 16, se cobra desde el mes siguiente. Costo mensual: S/ 30."
+        "Estimacion: para el año actual se calcula desde el mes de emision hasta el mes actual; "
+        "para años cerrados se calcula hasta diciembre. Costo mensual: S/ 30."
     )
 
 

@@ -11,6 +11,20 @@ COLOR_MAP = px.colors.qualitative.Set3
 FERIAS_MACRO_MANUALES = {
     "2025": [
         {
+            "FERIA": "Feria Dominical Noviembre 2025",
+            "INGRESO": "2025-11-01",
+            "MACRO_CATEGORIA": "ARTESANIA",
+            "PARTICIPANTES": 112,
+            "MONTO_TOTAL": 2240.0,
+        },
+        {
+            "FERIA": "Feria Dominical Noviembre 2025",
+            "INGRESO": "2025-11-01",
+            "MACRO_CATEGORIA": "GASTRONOMIA",
+            "PARTICIPANTES": 101,
+            "MONTO_TOTAL": 3030.0,
+        },
+        {
             "FERIA": "Navidad 2025",
             "INGRESO": "2025-12-24",
             "MACRO_CATEGORIA": "ARTESANIA",

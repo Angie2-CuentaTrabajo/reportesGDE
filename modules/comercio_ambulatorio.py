@@ -92,7 +92,7 @@ def load_comercio_ambulatorio_drive_data():
         extract_resolution_year(df.get("RESOLUCION DE SG", "")),
         errors="coerce",
     )
-    df["ANIO_CONTEO"] = df["FECHA_EMITIDA"].dt.year
+    df["ANIO_CONTEO"] = df["FECHA_EMITIDA"].dt.year.astype("float64")
     df["ANIO_CONTEO"] = df["ANIO_CONTEO"].fillna(df["ANIO_REFERENCIA"]).fillna(df["ANIO_RESOLUCION"])
 
     mismatch_mask = (
@@ -104,7 +104,7 @@ def load_comercio_ambulatorio_drive_data():
         lambda row: row["FECHA_EMITIDA"].replace(year=int(row["ANIO_RESOLUCION"])),
         axis=1,
     )
-    df.loc[mismatch_mask, "ANIO_CONTEO"] = df.loc[mismatch_mask, "ANIO_RESOLUCION"]
+    df.loc[mismatch_mask, "ANIO_CONTEO"] = df.loc[mismatch_mask, "ANIO_RESOLUCION"].astype("float64")
 
     df = df.dropna(subset=["ANIO_CONTEO"])
     if df.empty:

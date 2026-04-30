@@ -53,6 +53,15 @@ FERIAS_MACRO_MANUALES = {
             "MONTO_TOTAL": 30.0,
         },
     ],
+    "2026": [
+        {
+            "FERIA": "Feria de San Valentin 2026",
+            "INGRESO": "2026-02-14",
+            "MACRO_CATEGORIA": "ARTESANIA",
+            "PARTICIPANTES": 38,
+            "MONTO_TOTAL": 1500.0,
+        },
+    ],
 }
 
 
@@ -79,7 +88,7 @@ def agregar_ferias_macro_manuales(df, year):
 def load_ferias_data(year):
     archivo = Path(__file__).parent.parent / "data" / "ferias" / f"{year}_ferias_macro.csv"
     if not archivo.exists():
-        return pd.DataFrame()
+        return agregar_ferias_macro_manuales(pd.DataFrame(), year)
 
     df = pd.read_csv(archivo, sep=';', encoding='utf-8')
 
@@ -109,14 +118,16 @@ def show_ferias_module():
 def show_ferias_tres_marias():
     if 'year_sel' not in st.session_state:
         st.session_state.year_sel = '2025'
-    cols = st.columns(4)
+    cols = st.columns(5)
     if cols[0].button('2023'):
         st.session_state.year_sel = '2023'
     if cols[1].button('2024'):
         st.session_state.year_sel = '2024'
     if cols[2].button('2025'):
         st.session_state.year_sel = '2025'
-    if cols[3].button('Histórico'):
+    if cols[3].button('2026'):
+        st.session_state.year_sel = '2026'
+    if cols[4].button('Histórico'):
         st.session_state.year_sel = 'Histórico'
 
     year = st.session_state.year_sel
@@ -124,7 +135,7 @@ def show_ferias_tres_marias():
 
     if year == 'Histórico':
         dfs = []
-        for y in ['2023', '2024', '2025']:
+        for y in ['2023', '2024', '2025', '2026']:
             d = load_ferias_data(y)
             if not d.empty:
                 d['AÑO'] = y

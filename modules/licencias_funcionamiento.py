@@ -357,7 +357,7 @@ def grafico_expedientes(resumen_df):
         marker_line_width=2
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_general_expedientes")
 
 
 def grafico_recaudacion(resumen_df):
@@ -391,7 +391,7 @@ def grafico_recaudacion(resumen_df):
 
     fig.update_xaxes(type="category")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_general_recaudacion")
 
 
 def grafico_riesgo_apilado(detalle_df):
@@ -428,7 +428,7 @@ def grafico_riesgo_apilado(detalle_df):
 
     fig.update_xaxes(type="category")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_general_riesgo_apilado")
 
 
 def grafico_recaudacion_riesgo(detalle_df):
@@ -465,7 +465,7 @@ def grafico_recaudacion_riesgo(detalle_df):
 
     fig.update_xaxes(type="category")
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_general_recaudacion_riesgo")
 
 
 def grafico_mensual_licencias(detalle_df):
@@ -504,7 +504,8 @@ def grafico_mensual_licencias(detalle_df):
         yaxis_title="Recaudación (S/)",
         legend_title="Año",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    section_key = normalize_text(title).replace(" ", "_").replace("/", "_")
+    st.plotly_chart(fig, use_container_width=True, key="licencias_general_mensual")
 
     tabla = mensual.pivot_table(
         index=["MES_NUM", "MES"],
@@ -576,7 +577,7 @@ def grafico_2026_por_mes_y_riesgo(detalle_df):
         yaxis_title="Expedientes",
         legend_title="Riesgo",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_2026_mensual_riesgo")
 
     recaudacion_mensual = (
         detalle_2026.groupby(["MES", "MES_NUM"], observed=False)["TOTAL"]
@@ -603,7 +604,7 @@ def grafico_2026_por_mes_y_riesgo(detalle_df):
         yaxis_title="Recaudación (S/)",
         showlegend=False,
     )
-    st.plotly_chart(fig_recaudacion, use_container_width=True)
+    st.plotly_chart(fig_recaudacion, use_container_width=True, key="licencias_2026_recaudacion_mensual")
 
 
 def estadisticas_procedimientos(tramites_df):
@@ -657,7 +658,7 @@ def grafico_ingresos_por_tipo(tramites_df):
         yaxis_title="Recaudación (S/)",
         legend_title="Tipo de trámite",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_tramites_ingresos_tipo")
 
     fig_tramites = px.bar(
         resumen,
@@ -681,7 +682,7 @@ def grafico_ingresos_por_tipo(tramites_df):
         yaxis_title="Trámites",
         legend_title="Tipo de trámite",
     )
-    st.plotly_chart(fig_tramites, use_container_width=True)
+    st.plotly_chart(fig_tramites, use_container_width=True, key="licencias_tramites_cantidad_tipo")
 
 
 def grafico_mensual_procedimientos(tramites_df):
@@ -722,7 +723,7 @@ def grafico_mensual_procedimientos(tramites_df):
         legend_title="Tipo de trámite",
     )
     fig.for_each_annotation(lambda annotation: annotation.update(text=annotation.text.replace("PERIODO=", "")))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="licencias_tramites_mensual")
 
 
 def tabla_resumen_procedimientos(tramites_df):
@@ -908,12 +909,12 @@ def render_year_license_section(year, detalle_year, tramites_year):
         labels={"MES": "Mes", "EXPEDIENTES": "Expedientes", "RIESGO_AGRUPADO": "Riesgo"},
     )
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Riesgo")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_riesgo_mensual")
 
     tabla_detallada(detalle_year)
 
 
-def render_year_group_section(title, df_group):
+def render_year_group_section(year, title, df_group):
     st.subheader(title)
     if df_group.empty:
         st.info("No se encontraron registros para este grupo.")
@@ -954,7 +955,8 @@ def render_year_group_section(title, df_group):
     )
     fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
-    st.plotly_chart(fig, use_container_width=True)
+    section_key = normalize_text(title).replace(" ", "_").replace("/", "_")
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_{section_key}_ingresos_mensual")
 
     st.dataframe(
         resumen.rename(
@@ -1006,7 +1008,7 @@ def render_year_income_section(year, tramites_year):
         yaxis_title="Recaudación (S/)",
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_ingresos_tipo")
 
     st.dataframe(
         resumen_tipo.rename(
@@ -1101,13 +1103,13 @@ def render_year_licencias(year, detalle_df, resumen_df, tramites_df):
             tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "LICENCIA DE FUNCIONAMIENTO"
         ].copy()
 
-        render_year_group_section("Duplicados", duplicados)
+        render_year_group_section(year, "Duplicados", duplicados)
         st.markdown("---")
 
-        render_year_group_section("Transferencias", transferencias)
+        render_year_group_section(year, "Transferencias", transferencias)
         st.markdown("---")
 
-        render_year_group_section("Improcedentes con pago", improcedentes)
+        render_year_group_section(year, "Improcedentes con pago", improcedentes)
         st.markdown("---")
 
         render_year_income_section(year, tramites_year)

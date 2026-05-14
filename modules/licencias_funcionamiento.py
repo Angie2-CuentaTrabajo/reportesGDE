@@ -853,13 +853,147 @@ def render_general_licencias(detalle_df, resumen_df, tramites_df):
     tabla_detallada(detalle_df)
     st.markdown("---")
 
-    observaciones(resumen_df)
+    observaciones(resumen_df, detalle_df)
 
 
 def show_metric_row(metrics):
     cols = st.columns(len(metrics))
     for col, (label, value) in zip(cols, metrics):
         col.metric(label, value)
+
+
+def variacion_porcentual(base, actual):
+    if base in (0, None) or pd.isna(base):
+        return None
+    return ((actual - base) / base) * 100
+
+
+def build_monthly_license_summary(detalle_year):
+    if detalle_year.empty or not {"MES", "MES_NUM"}.issubset(detalle_year.columns):
+        return pd.DataFrame()
+    return (
+        detalle_year.groupby(["MES_NUM", "MES"], observed=False)
+        .agg(EXPEDIENTES=("EXPEDIENTES", "sum"), RECAUDACION=("TOTAL", "sum"))
+        .reset_index()
+        .sort_values("MES_NUM")
+    )
+
+
+def render_year_license_monthly_charts(year, detalle_year):
+    mensual = build_monthly_license_summary(detalle_year)
+    if mensual.empty:
+        return
+
+    st.subheader("Licencias emitidas por mes")
+    fig_expedientes = px.bar(
+        mensual,
+        x="MES",
+        y="EXPEDIENTES",
+        text="EXPEDIENTES",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_sequence=["#0f4c81"],
+        height=390,
+        labels={"MES": "Mes", "EXPEDIENTES": "Licencias emitidas"},
+    )
+    fig_expedientes.update_traces(textposition="outside")
+    fig_expedientes.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Licencias emitidas",
+        showlegend=False,
+    )
+    st.plotly_chart(fig_expedientes, use_container_width=True, key=f"licencias_{year}_emitidas_mensual")
+
+    st.subheader("Recaudación mensual por licencias")
+    fig_recaudacion = px.line(
+        mensual,
+        x="MES",
+        y="RECAUDACION",
+        markers=True,
+        text="RECAUDACION",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_sequence=["#0f4c81"],
+        height=380,
+        labels={"MES": "Mes", "RECAUDACION": "Recaudación (S/)"},
+    )
+    fig_recaudacion.update_traces(texttemplate="S/ %{y:,.2f}", textposition="top center", line=dict(width=3))
+    fig_recaudacion.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Mes",
+        yaxis_title="Recaudación (S/)",
+        showlegend=False,
+    )
+    st.plotly_chart(fig_recaudacion, use_container_width=True, key=f"licencias_{year}_recaudacion_mensual")
+
+    tabla = mensual.rename(
+        columns={
+            "MES": "Mes",
+            "EXPEDIENTES": "Licencias emitidas",
+            "RECAUDACION": "Recaudación",
+        }
+    )[["Mes", "Licencias emitidas", "Recaudación"]]
+    st.dataframe(
+        tabla,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Mes": st.column_config.TextColumn("Mes"),
+            "Licencias emitidas": st.column_config.NumberColumn("Licencias emitidas", format="%d"),
+            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
+        },
+    )
+
+
+def render_year_observations(year, detalle_year, tramites_year):
+    st.subheader("Lectura del año")
+    if detalle_year.empty:
+        st.info("No hay detalle suficiente para generar tendencias de licencias emitidas.")
+        return
+
+    mensual = build_monthly_license_summary(detalle_year)
+    riesgo = (
+        detalle_year.groupby("RIESGO_AGRUPADO", observed=False)["EXPEDIENTES"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    total_exp = int(detalle_year["EXPEDIENTES"].sum())
+    total_rec = float(detalle_year["TOTAL"].sum())
+    texto = (
+        f"- En **{year}** se registran **{total_exp:,} licencias emitidas** "
+        f"por **S/ {total_rec:,.2f}** de recaudación.\n"
+    )
+
+    if not mensual.empty:
+        pico_exp = mensual.sort_values(["EXPEDIENTES", "MES_NUM"], ascending=[False, True]).iloc[0]
+        pico_rec = mensual.sort_values(["RECAUDACION", "MES_NUM"], ascending=[False, True]).iloc[0]
+        texto += (
+            f"- El mes con mayor número de licencias emitidas fue **{pico_exp['MES']}**, "
+            f"con **{int(pico_exp['EXPEDIENTES']):,} registros**.\n"
+            f"- La mayor recaudación mensual se registró en **{pico_rec['MES']}**, "
+            f"con **S/ {float(pico_rec['RECAUDACION']):,.2f}**.\n"
+        )
+
+    if not riesgo.empty:
+        detalle_riesgo = ", ".join(f"{idx}: {int(val):,}" for idx, val in riesgo.items())
+        texto += f"- La distribución por riesgo fue: **{detalle_riesgo}**.\n"
+
+    if not tramites_year.empty:
+        otros = tramites_year[~tramites_year["ES_LICENCIA_PRINCIPAL"]]
+        if not otros.empty:
+            resumen_otros = (
+                otros.groupby("TIPO_PROCEDIMIENTO", observed=False)
+                .agg(TRAMITES=("FECHA_RESOLUCION", "size"), RECAUDACION=("COSTO_NUM", "sum"))
+                .sort_values("RECAUDACION", ascending=False)
+            )
+            principal = resumen_otros.iloc[0]
+            texto += (
+                f"- En trámites complementarios, el mayor ingreso corresponde a "
+                f"**{resumen_otros.index[0]}**, con **{int(principal['TRAMITES']):,} trámites** "
+                f"y **S/ {float(principal['RECAUDACION']):,.2f}**.\n"
+            )
+
+    st.info(texto)
 
 
 def render_year_license_section(year, detalle_year, tramites_year):
@@ -915,6 +1049,10 @@ def render_year_license_section(year, detalle_year, tramites_year):
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Riesgo")
     st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_riesgo_mensual")
 
+    render_year_license_monthly_charts(year, detalle_year)
+
+    render_year_observations(year, detalle_year, tramites_year)
+
     tabla_detallada(detalle_year)
 
 
@@ -961,6 +1099,22 @@ def render_year_group_section(year, title, df_group):
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
     section_key = normalize_text(title).replace(" ", "_").replace("/", "_")
     st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_{section_key}_ingresos_mensual")
+
+    fig_cantidad = px.bar(
+        resumen,
+        x="MES",
+        y="TRAMITES",
+        color="TIPO_PROCEDIMIENTO",
+        barmode="group",
+        text="TRAMITES",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_map=PROCEDURE_COLORS,
+        height=360,
+        labels={"MES": "Mes", "TRAMITES": "Trámites", "TIPO_PROCEDIMIENTO": "Tipo"},
+    )
+    fig_cantidad.update_traces(textposition="outside")
+    fig_cantidad.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
+    st.plotly_chart(fig_cantidad, use_container_width=True, key=f"licencias_{year}_{section_key}_cantidad_mensual")
 
     st.dataframe(
         resumen.rename(
@@ -1173,7 +1327,7 @@ def tabla_detallada(detalle_df):
     )
 
 
-def observaciones(resumen_df):
+def observaciones(resumen_df, detalle_df=None):
     st.subheader("Observaciones")
 
     periodo_max_exp = resumen_df.loc[resumen_df["EXPEDIENTES"].idxmax(), "PERIODO"]
@@ -1186,13 +1340,69 @@ def observaciones(resumen_df):
     else:
         texto_fuente = "- Los totales anuales se han consignado según el cuadro consolidado fuente.\n"
 
-    st.info(
-        f"""
-- El período con mayor número de expedientes fue **{periodo_max_exp}**.
-- El período con mayor recaudación fue **{periodo_max_rec}**.
-{texto_fuente}
-"""
+    texto = (
+        f"- En el período analizado, el año con mayor número de licencias emitidas fue "
+        f"**{periodo_max_exp}**, con **{int(resumen_df['EXPEDIENTES'].max()):,} expedientes**.\n"
+        f"- El año con mayor recaudación fue **{periodo_max_rec}**, con "
+        f"**S/ {float(resumen_df['RECAUDACION'].max()):,.2f}**.\n"
     )
+
+    if detalle_df is not None and not detalle_df.empty and {"MES", "MES_NUM"}.issubset(detalle_df.columns):
+        mensual_general = (
+            detalle_df.groupby(["MES_NUM", "MES"], observed=False)["EXPEDIENTES"]
+            .sum()
+            .reset_index(name="TOTAL")
+            .sort_values(["TOTAL", "MES_NUM"], ascending=[False, True])
+        )
+        if not mensual_general.empty:
+            mes_general = mensual_general.iloc[0]
+            texto += (
+                f"- El mes con mayor concentración de licencias en todo el período fue "
+                f"**{mes_general['MES']}**, con **{int(mes_general['TOTAL']):,} registros acumulados**.\n"
+            )
+
+        pico_por_anio = (
+            detalle_df.groupby(["PERIODO", "MES_NUM", "MES"], observed=False)["EXPEDIENTES"]
+            .sum()
+            .reset_index(name="TOTAL")
+            .sort_values(["PERIODO", "TOTAL", "MES_NUM"], ascending=[True, False, True])
+            .drop_duplicates(subset=["PERIODO"])
+            .sort_values("PERIODO")
+        )
+        for _, fila in pico_por_anio.iterrows():
+            texto += (
+                f"- En **{fila['PERIODO']}**, el mes con mayor número de licencias fue "
+                f"**{fila['MES']}**, con **{int(fila['TOTAL']):,} registros**.\n"
+            )
+
+    resumen_ordenado = resumen_df.copy()
+    resumen_ordenado["ANIO_NUM"] = resumen_ordenado["PERIODO"].astype(str).str.extract(r"(\d{4})")[0].astype(int)
+    resumen_ordenado = resumen_ordenado.sort_values("ANIO_NUM")
+    filas = list(resumen_ordenado.itertuples(index=False))
+    for anterior, actual in zip(filas, filas[1:]):
+        variacion = variacion_porcentual(anterior.EXPEDIENTES, actual.EXPEDIENTES)
+        if variacion is None:
+            continue
+        tendencia = "disminución" if variacion < 0 else "incremento"
+        texto += (
+            f"- Entre **{anterior.PERIODO} y {actual.PERIODO}** se observa una "
+            f"**{tendencia} de {abs(variacion):.1f}%** en licencias emitidas.\n"
+        )
+
+    if detalle_df is not None and not detalle_df.empty and "MES_NUM" in detalle_df.columns:
+        max_year = str(resumen_ordenado.iloc[-1]["PERIODO"])
+        detalle_max = detalle_df[detalle_df["PERIODO"].astype(str) == max_year]
+        if not detalle_max.empty:
+            ultimo_mes = int(detalle_max["MES_NUM"].max())
+            if ultimo_mes < 12:
+                texto += (
+                    f"- El año **{max_year}** presenta información parcial hasta "
+                    f"**{MONTH_MAP.get(ultimo_mes, 'Sin fecha')}**, por lo que su comparación "
+                    "con años completos debe interpretarse con cautela.\n"
+                )
+
+    texto += texto_fuente
+    st.info(texto)
 
 def show_licencias_funcionamiento_module():
     st.header("Módulo de Licencias de Funcionamiento")

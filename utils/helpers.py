@@ -36,15 +36,18 @@ def install_excel_dataframe_download(st_module):
         return
 
     original_dataframe = st_module.dataframe
+    st_module._excel_dataframe_download_counter = 0
 
     def dataframe_with_download(data=None, *args, **kwargs):
         result = original_dataframe(data, *args, **kwargs)
         if isinstance(data, pd.DataFrame):
             excel_bytes = dataframe_to_excel_bytes(data)
+            st_module._excel_dataframe_download_counter += 1
             caller = inspect.stack()[1]
             key_source = (
                 f"{caller.filename}|{caller.lineno}|"
-                f"{hashlib.md5(excel_bytes).hexdigest()}"
+                f"{hashlib.md5(excel_bytes).hexdigest()}|"
+                f"{st_module._excel_dataframe_download_counter}"
             )
             key = f"download_excel_{hashlib.md5(key_source.encode('utf-8')).hexdigest()}"
             st_module.download_button(

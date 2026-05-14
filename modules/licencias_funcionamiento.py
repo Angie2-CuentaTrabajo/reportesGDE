@@ -1103,13 +1103,13 @@ def render_year_licencias(year, detalle_df, resumen_df, tramites_df):
             tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "LICENCIA DE FUNCIONAMIENTO"
         ].copy()
 
-        render_year_group_section(year, "Duplicados", duplicados)
+        render_year_group_section("Duplicados", duplicados)
         st.markdown("---")
 
-        render_year_group_section(year, "Transferencias", transferencias)
+        render_year_group_section("Transferencias", transferencias)
         st.markdown("---")
 
-        render_year_group_section(year, "Improcedentes con pago", improcedentes)
+        render_year_group_section("Improcedentes con pago", improcedentes)
         st.markdown("---")
 
         render_year_income_section(year, tramites_year)

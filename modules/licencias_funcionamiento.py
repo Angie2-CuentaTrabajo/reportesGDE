@@ -3,7 +3,7 @@ import plotly.express as px
 import streamlit as st
 from utils.google_sheets import get_resoluciones_sheet_or_none, normalize_text, parse_money_series
 
-# Colores por periodo
+# Colores por período
 YEAR_COLORS = {
     "2023": "#e74c3c",
     "2024": "#3498db",
@@ -104,11 +104,10 @@ def parse_resolution_dates(series):
 def procedure_group(procedure):
     if procedure in PRIMARY_LICENSE_PROCEDURES:
         return "Licencias temporales/indeterminadas"
-    if procedure in {
-        "TRANSFERENCIA DE LICENCIA DE FUNCIONAMIENTO",
-        "DUPLICADO DE LICENCIA DE FUNCIONAMIENTO",
-    }:
-        return "Duplicados y transferencias"
+    if procedure == "TRANSFERENCIA DE LICENCIA DE FUNCIONAMIENTO":
+        return "Transferencias"
+    if procedure == "DUPLICADO DE LICENCIA DE FUNCIONAMIENTO":
+        return "Duplicados"
     if procedure == "LICENCIA DE FUNCIONAMIENTO":
         return "Improcedentes con pago"
     return "Otros"
@@ -263,7 +262,7 @@ def load_licencias_funcionamiento_data():
         {"PERIODO": "2026 (Ene-Abr)", "RIESGO_DETALLE": "MUY ALTO DEL MES DE ABRIL", "RIESGO_AGRUPADO": "ALTOS Y MUY ALTOS", "EXPEDIENTES": 20, "COSTO": 631.20, "TOTAL": 12624.00},
     ]
 
-    # Resumen anual segun el total consolidado mostrado en tu cuadro
+    # Resumen anual según el total consolidado mostrado en tu cuadro
     resumen_data = [
         {"PERIODO": "2023", "EXPEDIENTES": 800, "RECAUDACION": 304120.00},
         {"PERIODO": "2024", "EXPEDIENTES": 800, "RECAUDACION": 256320.00},
@@ -314,7 +313,7 @@ def load_licencias_funcionamiento_data():
 
 
 def estadisticas_generales(resumen_df):
-    st.subheader("Estadisticas Generales")
+    st.subheader("Estadísticas generales")
 
     c1, c2, c3, c4 = st.columns(4)
 
@@ -323,14 +322,14 @@ def estadisticas_generales(resumen_df):
     periodo_max = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
     promedio_expedientes = resumen_df["EXPEDIENTES"].mean()
 
-    c1.metric("Total Expedientes", f"{total_expedientes:,}")
-    c2.metric("Recaudacion Total", f"S/ {total_recaudado:,.2f}")
-    c3.metric("Mayor Recaudacion", str(periodo_max))
-    c4.metric("Promedio Expedientes", f"{promedio_expedientes:.1f}")
+    c1.metric("Total de expedientes", f"{total_expedientes:,}")
+    c2.metric("Recaudación total", f"S/ {total_recaudado:,.2f}")
+    c3.metric("Mayor recaudación", str(periodo_max))
+    c4.metric("Promedio de expedientes", f"{promedio_expedientes:.1f}")
 
 
 def grafico_expedientes(resumen_df):
-    st.subheader("Expedientes por Año")
+    st.subheader("Expedientes por año")
 
     fig = px.bar(
         resumen_df,
@@ -341,13 +340,13 @@ def grafico_expedientes(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Año", "EXPEDIENTES": "Nro. de Expedientes"}
+        labels={"PERIODO": "Año", "EXPEDIENTES": "Nro. de expedientes"}
     )
 
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Año",
-        yaxis_title="Nro. de Expedientes",
+        yaxis_title="Nro. de expedientes",
         showlegend=False
     )
 
@@ -362,7 +361,7 @@ def grafico_expedientes(resumen_df):
 
 
 def grafico_recaudacion(resumen_df):
-    st.subheader("Recaudacion por Año")
+    st.subheader("Recaudación por año")
 
     fig = px.bar(
         resumen_df,
@@ -373,7 +372,7 @@ def grafico_recaudacion(resumen_df):
         color_discrete_map=YEAR_COLORS,
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
-        labels={"PERIODO": "Año", "RECAUDACION": "Recaudacion (S/)"}
+        labels={"PERIODO": "Año", "RECAUDACION": "Recaudación (S/)"}
     )
 
     fig.update_traces(
@@ -386,7 +385,7 @@ def grafico_recaudacion(resumen_df):
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Año",
-        yaxis_title="Recaudacion (S/)",
+        yaxis_title="Recaudación (S/)",
         showlegend=False
     )
 
@@ -415,7 +414,7 @@ def grafico_riesgo_apilado(detalle_df):
         height=450,
         labels={
             "PERIODO": "Año",
-            "EXPEDIENTES": "Nro. de Expedientes",
+            "EXPEDIENTES": "Nro. de expedientes",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
@@ -423,7 +422,7 @@ def grafico_riesgo_apilado(detalle_df):
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Año",
-        yaxis_title="Nro. de Expedientes",
+        yaxis_title="Nro. de expedientes",
         legend_title="Riesgo"
     )
 
@@ -433,7 +432,7 @@ def grafico_riesgo_apilado(detalle_df):
 
 
 def grafico_recaudacion_riesgo(detalle_df):
-    st.subheader("Recaudacion por Riesgo")
+    st.subheader("Recaudación por riesgo")
 
     riesgo_recaudacion = (
         detalle_df.groupby(["PERIODO", "RIESGO_AGRUPADO"], observed=False)["TOTAL"]
@@ -452,7 +451,7 @@ def grafico_recaudacion_riesgo(detalle_df):
         height=450,
         labels={
             "PERIODO": "Año",
-            "TOTAL": "Recaudacion (S/)",
+            "TOTAL": "Recaudación (S/)",
             "RIESGO_AGRUPADO": "Riesgo"
         }
     )
@@ -460,7 +459,7 @@ def grafico_recaudacion_riesgo(detalle_df):
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Año",
-        yaxis_title="Recaudacion (S/)",
+        yaxis_title="Recaudación (S/)",
         legend_title="Riesgo"
     )
 
@@ -473,7 +472,7 @@ def grafico_mensual_licencias(detalle_df):
     if not {"MES", "MES_NUM"}.issubset(detalle_df.columns):
         return
 
-    st.subheader("Recaudacion mensual por Licencias")
+    st.subheader("Recaudación mensual por licencias")
 
     mensual = (
         detalle_df.groupby(["PERIODO", "MES", "MES_NUM"], observed=False)
@@ -494,7 +493,7 @@ def grafico_mensual_licencias(detalle_df):
         height=450,
         labels={
             "MES": "Mes",
-            "RECAUDACION": "Recaudacion (S/)",
+            "RECAUDACION": "Recaudación (S/)",
             "PERIODO": "Año",
         },
     )
@@ -502,7 +501,7 @@ def grafico_mensual_licencias(detalle_df):
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Mes",
-        yaxis_title="Recaudacion (S/)",
+        yaxis_title="Recaudación (S/)",
         legend_title="Año",
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -595,13 +594,13 @@ def grafico_2026_por_mes_y_riesgo(detalle_df):
         category_orders={"MES": MONTH_ORDER},
         color_discrete_sequence=["#0f4c81"],
         height=380,
-        labels={"MES": "Mes", "RECAUDACION": "Recaudacion (S/)"},
+        labels={"MES": "Mes", "RECAUDACION": "Recaudación (S/)"},
     )
     fig_recaudacion.update_traces(texttemplate="S/ %{y:,.2f}", textposition="top center", line=dict(width=3))
     fig_recaudacion.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis_title="Mes",
-        yaxis_title="Recaudacion (S/)",
+        yaxis_title="Recaudación (S/)",
         showlegend=False,
     )
     st.plotly_chart(fig_recaudacion, use_container_width=True)
@@ -611,17 +610,17 @@ def estadisticas_procedimientos(tramites_df):
     if tramites_df is None or tramites_df.empty:
         return
 
-    st.subheader("Ingresos por Tramites de Licencias")
+    st.subheader("Ingresos por trámites de licencias")
     total_tramites = int(len(tramites_df))
     total_ingresos = float(tramites_df["COSTO_NUM"].sum())
     principales = tramites_df[tramites_df["ES_LICENCIA_PRINCIPAL"]]
     otros = tramites_df[~tramites_df["ES_LICENCIA_PRINCIPAL"]]
 
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total tramites", f"{total_tramites:,}")
+    c1.metric("Total trámites", f"{total_tramites:,}")
     c2.metric("Ingresos totales", f"S/ {total_ingresos:,.2f}")
     c3.metric("Temp. e indet.", f"{len(principales):,}")
-    c4.metric("Otros tramites", f"{len(otros):,}")
+    c4.metric("Otros trámites", f"{len(otros):,}")
 
 
 def grafico_ingresos_por_tipo(tramites_df):
@@ -646,17 +645,17 @@ def grafico_ingresos_por_tipo(tramites_df):
         category_orders={"PERIODO": YEAR_ORDER},
         height=450,
         labels={
-            "PERIODO": "Ano",
-            "RECAUDACION": "Recaudacion (S/)",
-            "TIPO_PROCEDIMIENTO": "Tipo de tramite",
+            "PERIODO": "Año",
+            "RECAUDACION": "Recaudación (S/)",
+            "TIPO_PROCEDIMIENTO": "Tipo de trámite",
         },
     )
     fig.update_traces(texttemplate="S/ %{y:,.2f}", textposition="inside")
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Ano",
-        yaxis_title="Recaudacion (S/)",
-        legend_title="Tipo de tramite",
+        xaxis_title="Año",
+        yaxis_title="Recaudación (S/)",
+        legend_title="Tipo de trámite",
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -671,16 +670,16 @@ def grafico_ingresos_por_tipo(tramites_df):
         category_orders={"PERIODO": YEAR_ORDER},
         height=420,
         labels={
-            "PERIODO": "Ano",
-            "TRAMITES": "Tramites",
-            "TIPO_PROCEDIMIENTO": "Tipo de tramite",
+            "PERIODO": "Año",
+            "TRAMITES": "Trámites",
+            "TIPO_PROCEDIMIENTO": "Tipo de trámite",
         },
     )
     fig_tramites.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Ano",
-        yaxis_title="Tramites",
-        legend_title="Tipo de tramite",
+        xaxis_title="Año",
+        yaxis_title="Trámites",
+        legend_title="Tipo de trámite",
     )
     st.plotly_chart(fig_tramites, use_container_width=True)
 
@@ -713,14 +712,14 @@ def grafico_mensual_procedimientos(tramites_df):
         height=520,
         labels={
             "MES": "Mes",
-            "RECAUDACION": "Recaudacion (S/)",
-            "TIPO_PROCEDIMIENTO": "Tipo de tramite",
+            "RECAUDACION": "Recaudación (S/)",
+            "TIPO_PROCEDIMIENTO": "Tipo de trámite",
         },
     )
     fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="inside")
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        legend_title="Tipo de tramite",
+        legend_title="Tipo de trámite",
     )
     fig.for_each_annotation(lambda annotation: annotation.update(text=annotation.text.replace("PERIODO=", "")))
     st.plotly_chart(fig, use_container_width=True)
@@ -730,20 +729,20 @@ def tabla_resumen_procedimientos(tramites_df):
     if tramites_df is None or tramites_df.empty:
         return
 
-    st.subheader("Resumen por Tipo de Tramite")
+    st.subheader("Resumen por tipo de trámite")
     resumen = (
         tramites_df.groupby(["PERIODO", "TIPO_PROCEDIMIENTO", "GRUPO_REPORTE"], observed=False)
         .agg(
-            Tramites=("FECHA_RESOLUCION", "size"),
-            Recaudacion=("COSTO_NUM", "sum"),
+            Trámites=("FECHA_RESOLUCION", "size"),
+            Recaudación=("COSTO_NUM", "sum"),
             Costo_promedio=("COSTO_NUM", "mean"),
         )
         .reset_index()
         .sort_values(["PERIODO", "TIPO_PROCEDIMIENTO"])
         .rename(
             columns={
-                "PERIODO": "Ano",
-                "TIPO_PROCEDIMIENTO": "Tipo de tramite",
+                "PERIODO": "Año",
+                "TIPO_PROCEDIMIENTO": "Tipo de trámite",
                 "GRUPO_REPORTE": "Grupo",
             }
         )
@@ -754,11 +753,11 @@ def tabla_resumen_procedimientos(tramites_df):
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Ano": st.column_config.TextColumn("Ano"),
-            "Tipo de tramite": st.column_config.TextColumn("Tipo de tramite", width="large"),
+            "Año": st.column_config.TextColumn("Año"),
+            "Tipo de trámite": st.column_config.TextColumn("Tipo de trámite", width="large"),
             "Grupo": st.column_config.TextColumn("Grupo", width="medium"),
-            "Tramites": st.column_config.NumberColumn("Tramites", format="%d"),
-            "Recaudacion": st.column_config.NumberColumn("Recaudacion", format="S/ %.2f"),
+            "Trámites": st.column_config.NumberColumn("Trámites", format="%d"),
+            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
             "Costo_promedio": st.column_config.NumberColumn("Costo promedio", format="S/ %.2f"),
         },
     )
@@ -768,7 +767,7 @@ def tabla_detalle_tramites(tramites_df):
     if tramites_df is None or tramites_df.empty:
         return
 
-    st.subheader("Detalle de Tramites desde Drive")
+    st.subheader("Detalle de trámites importados desde Drive")
     detalle = tramites_df[
         [
             "PERIODO",
@@ -784,10 +783,10 @@ def tabla_detalle_tramites(tramites_df):
     detalle["FECHA_RESOLUCION"] = detalle["FECHA_RESOLUCION"].dt.strftime("%d/%m/%Y")
     detalle = detalle.rename(
         columns={
-            "PERIODO": "Ano",
+            "PERIODO": "Año",
             "MES": "Mes",
             "FECHA_RESOLUCION": "Fecha resoluc.",
-            "TIPO_PROCEDIMIENTO": "Tipo de tramite",
+            "TIPO_PROCEDIMIENTO": "Tipo de trámite",
             "GRUPO_REPORTE": "Grupo",
             "RIESGO_AGRUPADO": "Riesgo",
             "COSTO_NUM": "Costo",
@@ -800,10 +799,10 @@ def tabla_detalle_tramites(tramites_df):
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Ano": st.column_config.TextColumn("Ano"),
+            "Año": st.column_config.TextColumn("Año"),
             "Mes": st.column_config.TextColumn("Mes"),
             "Fecha resoluc.": st.column_config.TextColumn("Fecha resoluc."),
-            "Tipo de tramite": st.column_config.TextColumn("Tipo de tramite", width="large"),
+            "Tipo de trámite": st.column_config.TextColumn("Tipo de trámite", width="large"),
             "Grupo": st.column_config.TextColumn("Grupo", width="medium"),
             "Riesgo": st.column_config.TextColumn("Riesgo"),
             "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
@@ -812,90 +811,13 @@ def tabla_detalle_tramites(tramites_df):
     )
 
 
-def tabla_resumen_anual(resumen_df):
-    st.subheader("Tabla Resumen Anual")
-
-    tabla_df = resumen_df.copy().rename(columns={
-        "PERIODO": "Año",
-        "EXPEDIENTES": "Nro. Expedientes",
-        "RECAUDACION": "Recaudacion"
-    })
-
-    st.dataframe(
-        tabla_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Año": st.column_config.TextColumn("Año", width="medium"),
-            "Nro. Expedientes": st.column_config.NumberColumn("Nro. Expedientes", format="%d"),
-            "Recaudacion": st.column_config.NumberColumn("Recaudacion", format="S/ %.2f"),
-        }
-    )
+def filter_period(df, year):
+    if df is None or df.empty or "PERIODO" not in df.columns:
+        return df.iloc[0:0].copy() if df is not None else pd.DataFrame()
+    return df[df["PERIODO"].astype(str).str.startswith(str(year))].copy()
 
 
-def tabla_detallada(detalle_df):
-    st.subheader("Detalle por Riesgo")
-
-    tabla_df = detalle_df.copy().rename(columns={
-        "PERIODO": "Año",
-        "RIESGO_DETALLE": "Riesgo",
-        "EXPEDIENTES": "Expedientes",
-        "COSTO": "Costo",
-        "TOTAL": "Total"
-    })
-
-    tabla_df = tabla_df[["Año", "Riesgo", "Expedientes", "Costo", "Total"]]
-
-    st.dataframe(
-        tabla_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Año": st.column_config.TextColumn("Año", width="small"),
-            "Riesgo": st.column_config.TextColumn("Riesgo", width="large"),
-            "Expedientes": st.column_config.NumberColumn("Expedientes", format="%d"),
-            "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
-            "Total": st.column_config.NumberColumn("Total", format="S/ %.2f"),
-        }
-    )
-
-
-def observaciones(resumen_df):
-    st.subheader("Observaciones")
-
-    periodo_max_exp = resumen_df.loc[resumen_df["EXPEDIENTES"].idxmax(), "PERIODO"]
-    periodo_max_rec = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
-    fuente = resumen_df.attrs.get("source")
-    if fuente == "drive":
-        texto_fuente = "- Los datos se actualizan automaticamente desde Google Drive.\n"
-    elif fuente == "mixed":
-        texto_fuente = "- Se conserva el historico local y el ano actual se actualiza desde Google Drive.\n"
-    else:
-        texto_fuente = "- Los totales anuales se han consignado segun el cuadro consolidado fuente.\n"
-
-    st.info(
-        f"""
-- El periodo con mayor numero de expedientes fue **{periodo_max_exp}**.
-- El periodo con mayor recaudacion fue **{periodo_max_rec}**.
-{texto_fuente}
-"""
-    )
-
-def show_licencias_funcionamiento_module():
-    st.header("Modulo de Licencias de Funcionamiento")
-    st.markdown("---")
-
-    detalle_df, resumen_df, tramites_df = load_licencias_funcionamiento_data()
-
-    if resumen_df is None or resumen_df.empty:
-        st.error("No se pudieron cargar los datos.")
-        return
-
-    if resumen_df.attrs.get("source") == "drive":
-        st.success("Datos actualizados desde Google Drive: hojas RESOLUCIONES 2025 y RESOLUCIONES 2026.")
-    elif resumen_df.attrs.get("source") == "mixed":
-        st.success("Historico local conservado y anos disponibles actualizados desde Google Drive.")
-
+def render_general_licencias(detalle_df, resumen_df, tramites_df):
     estadisticas_generales(resumen_df)
     st.markdown("---")
 
@@ -932,3 +854,360 @@ def show_licencias_funcionamiento_module():
     st.markdown("---")
 
     observaciones(resumen_df)
+
+
+def show_metric_row(metrics):
+    cols = st.columns(len(metrics))
+    for col, (label, value) in zip(cols, metrics):
+        col.metric(label, value)
+
+
+def render_year_license_section(year, detalle_year, tramites_year):
+    st.subheader("Licencias emitidas: temporales e indeterminadas")
+
+    main_records = tramites_year[tramites_year["ES_LICENCIA_PRINCIPAL"]].copy()
+    expedientes = int(detalle_year["EXPEDIENTES"].sum()) if not detalle_year.empty else len(main_records)
+    ingresos = float(detalle_year["TOTAL"].sum()) if not detalle_year.empty else float(main_records["COSTO_NUM"].sum())
+    riesgo_medio = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"] == "MEDIO", "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
+    riesgo_alto = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"].isin(["ALTO", "MUY ALTO", "ALTOS Y MUY ALTOS"]), "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
+
+    show_metric_row(
+        [
+            ("Expedientes", f"{expedientes:,}"),
+            ("Ingresos", f"S/ {ingresos:,.2f}"),
+            ("Riesgo medio", f"{riesgo_medio:,}"),
+            ("Alto / muy alto", f"{riesgo_alto:,}"),
+        ]
+    )
+
+    if detalle_year.empty:
+        st.info("No hay detalle mensual por riesgo para este año.")
+        return
+
+    if not {"MES", "MES_NUM"}.issubset(detalle_year.columns):
+        tabla_detallada(detalle_year)
+        return
+
+    mensual_riesgo = (
+        detalle_year.groupby(["MES", "MES_NUM", "RIESGO_AGRUPADO"], observed=False)
+        .agg(EXPEDIENTES=("EXPEDIENTES", "sum"), RECAUDACION=("TOTAL", "sum"))
+        .reset_index()
+        .sort_values(["MES_NUM", "RIESGO_AGRUPADO"])
+    )
+
+    fig = px.bar(
+        mensual_riesgo,
+        x="MES",
+        y="EXPEDIENTES",
+        color="RIESGO_AGRUPADO",
+        barmode="stack",
+        text="EXPEDIENTES",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_map=RISK_COLORS,
+        height=410,
+        labels={"MES": "Mes", "EXPEDIENTES": "Expedientes", "RIESGO_AGRUPADO": "Riesgo"},
+    )
+    fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Riesgo")
+    st.plotly_chart(fig, use_container_width=True)
+
+    tabla_detallada(detalle_year)
+
+
+def render_year_group_section(title, df_group):
+    st.subheader(title)
+    if df_group.empty:
+        st.info("No se encontraron registros para este grupo.")
+        return
+
+    total_tramites = len(df_group)
+    total_ingresos = float(df_group["COSTO_NUM"].sum())
+    promedio = total_ingresos / total_tramites if total_tramites else 0
+    tipo_principal = df_group["TIPO_PROCEDIMIENTO"].mode().iloc[0] if not df_group["TIPO_PROCEDIMIENTO"].mode().empty else "-"
+
+    show_metric_row(
+        [
+            ("Trámites", f"{total_tramites:,}"),
+            ("Ingresos", f"S/ {total_ingresos:,.2f}"),
+            ("Costo promedio", f"S/ {promedio:,.2f}"),
+            ("Tipo principal", tipo_principal),
+        ]
+    )
+
+    resumen = (
+        df_group.groupby(["TIPO_PROCEDIMIENTO", "MES", "MES_NUM"], observed=False)
+        .agg(TRAMITES=("FECHA_RESOLUCION", "size"), RECAUDACION=("COSTO_NUM", "sum"))
+        .reset_index()
+        .sort_values(["MES_NUM", "TIPO_PROCEDIMIENTO"])
+    )
+
+    fig = px.bar(
+        resumen,
+        x="MES",
+        y="RECAUDACION",
+        color="TIPO_PROCEDIMIENTO",
+        barmode="group",
+        text="RECAUDACION",
+        category_orders={"MES": MONTH_ORDER},
+        color_discrete_map=PROCEDURE_COLORS,
+        height=390,
+        labels={"MES": "Mes", "RECAUDACION": "Recaudación (S/)", "TIPO_PROCEDIMIENTO": "Tipo"},
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
+    fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.dataframe(
+        resumen.rename(
+            columns={
+                "TIPO_PROCEDIMIENTO": "Tipo de trámite",
+                "MES": "Mes",
+                "TRAMITES": "Trámites",
+                "RECAUDACION": "Recaudación",
+            }
+        )[["Tipo de trámite", "Mes", "Trámites", "Recaudación"]],
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Tipo de trámite": st.column_config.TextColumn("Tipo de trámite", width="large"),
+            "Mes": st.column_config.TextColumn("Mes"),
+            "Trámites": st.column_config.NumberColumn("Trámites", format="%d"),
+            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
+        },
+    )
+
+
+def render_year_income_section(year, tramites_year):
+    st.subheader("Ingresos del año")
+    if tramites_year.empty:
+        st.info("No hay registros detallados desde Drive para calcular ingresos por tipo.")
+        return
+
+    resumen_tipo = (
+        tramites_year.groupby("TIPO_PROCEDIMIENTO", observed=False)
+        .agg(TRAMITES=("FECHA_RESOLUCION", "size"), RECAUDACION=("COSTO_NUM", "sum"))
+        .reset_index()
+        .sort_values("RECAUDACION", ascending=False)
+    )
+
+    fig = px.bar(
+        resumen_tipo,
+        x="TIPO_PROCEDIMIENTO",
+        y="RECAUDACION",
+        color="TIPO_PROCEDIMIENTO",
+        text="RECAUDACION",
+        color_discrete_map=PROCEDURE_COLORS,
+        height=410,
+        labels={"TIPO_PROCEDIMIENTO": "Tipo de trámite", "RECAUDACION": "Recaudación (S/)"},
+    )
+    fig.update_traces(texttemplate="S/ %{y:,.2f}", textposition="outside")
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis_title="Tipo de trámite",
+        yaxis_title="Recaudación (S/)",
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.dataframe(
+        resumen_tipo.rename(
+            columns={
+                "TIPO_PROCEDIMIENTO": "Tipo de trámite",
+                "TRAMITES": "Trámites",
+                "RECAUDACION": "Recaudación",
+            }
+        ),
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Tipo de trámite": st.column_config.TextColumn("Tipo de trámite", width="large"),
+            "Trámites": st.column_config.NumberColumn("Trámites", format="%d"),
+            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
+        },
+    )
+
+
+def render_year_consolidated_section(year, detalle_year, resumen_year, tramites_year):
+    st.subheader("Consolidado general")
+    if not resumen_year.empty:
+        tabla_resumen_anual(resumen_year)
+
+    if tramites_year.empty:
+        if not detalle_year.empty:
+            tabla_detallada(detalle_year)
+        return
+
+    total = pd.DataFrame(
+        [
+            {
+                "Año": year,
+                "Total trámites": len(tramites_year),
+                "Ingresos totales": float(tramites_year["COSTO_NUM"].sum()),
+                "Licencias temp./indet.": int(tramites_year["ES_LICENCIA_PRINCIPAL"].sum()),
+                "Otros trámites": int((~tramites_year["ES_LICENCIA_PRINCIPAL"]).sum()),
+            }
+        ]
+    )
+    st.dataframe(
+        total,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Año": st.column_config.TextColumn("Año"),
+            "Total trámites": st.column_config.NumberColumn("Total trámites", format="%d"),
+            "Ingresos totales": st.column_config.NumberColumn("Ingresos totales", format="S/ %.2f"),
+            "Licencias temp./indet.": st.column_config.NumberColumn("Licencias temp./indet.", format="%d"),
+            "Otros trámites": st.column_config.NumberColumn("Otros trámites", format="%d"),
+        },
+    )
+    tabla_detalle_tramites(tramites_year)
+
+
+def render_year_licencias(year, detalle_df, resumen_df, tramites_df):
+    detalle_year = filter_period(detalle_df, year)
+    resumen_year = filter_period(resumen_df, year)
+    tramites_year = filter_period(tramites_df, year)
+
+    st.subheader(f"Reporte {year}")
+    if detalle_year.empty and resumen_year.empty and tramites_year.empty:
+        st.info(f"No hay datos para {year}.")
+        return
+
+    total_expedientes = int(resumen_year["EXPEDIENTES"].sum()) if not resumen_year.empty else 0
+    recaudacion_base = float(resumen_year["RECAUDACION"].sum()) if not resumen_year.empty else 0
+    ingresos_detallados = float(tramites_year["COSTO_NUM"].sum()) if not tramites_year.empty else recaudacion_base
+    total_tramites = len(tramites_year) if not tramites_year.empty else total_expedientes
+
+    show_metric_row(
+        [
+            ("Expedientes de licencias", f"{total_expedientes:,}"),
+            ("Recaudación de licencias", f"S/ {recaudacion_base:,.2f}"),
+            ("Trámites registrados", f"{total_tramites:,}"),
+            ("Ingresos registrados", f"S/ {ingresos_detallados:,.2f}"),
+        ]
+    )
+    st.markdown("---")
+
+    render_year_license_section(year, detalle_year, tramites_year)
+    st.markdown("---")
+
+    if not tramites_year.empty:
+        duplicados = tramites_year[
+            tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "DUPLICADO DE LICENCIA DE FUNCIONAMIENTO"
+        ].copy()
+        transferencias = tramites_year[
+            tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "TRANSFERENCIA DE LICENCIA DE FUNCIONAMIENTO"
+        ].copy()
+        improcedentes = tramites_year[
+            tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "LICENCIA DE FUNCIONAMIENTO"
+        ].copy()
+
+        render_year_group_section("Duplicados", duplicados)
+        st.markdown("---")
+
+        render_year_group_section("Transferencias", transferencias)
+        st.markdown("---")
+
+        render_year_group_section("Improcedentes con pago", improcedentes)
+        st.markdown("---")
+
+        render_year_income_section(year, tramites_year)
+        st.markdown("---")
+    else:
+        st.info("Para este año solo se muestra el consolidado local; no hay detalle por tipo de trámite desde Drive.")
+        st.markdown("---")
+
+    render_year_consolidated_section(year, detalle_year, resumen_year, tramites_year)
+
+
+def tabla_resumen_anual(resumen_df):
+    st.subheader("Tabla resumen anual")
+
+    tabla_df = resumen_df.copy().rename(columns={
+        "PERIODO": "Año",
+        "EXPEDIENTES": "Nro. de expedientes",
+        "RECAUDACION": "Recaudación"
+    })
+
+    st.dataframe(
+        tabla_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Año": st.column_config.TextColumn("Año", width="medium"),
+            "Nro. de expedientes": st.column_config.NumberColumn("Nro. de expedientes", format="%d"),
+            "Recaudación": st.column_config.NumberColumn("Recaudación", format="S/ %.2f"),
+        }
+    )
+
+
+def tabla_detallada(detalle_df):
+    st.subheader("Detalle por riesgo")
+
+    tabla_df = detalle_df.copy().rename(columns={
+        "PERIODO": "Año",
+        "RIESGO_DETALLE": "Riesgo",
+        "EXPEDIENTES": "Expedientes",
+        "COSTO": "Costo",
+        "TOTAL": "Total"
+    })
+
+    tabla_df = tabla_df[["Año", "Riesgo", "Expedientes", "Costo", "Total"]]
+
+    st.dataframe(
+        tabla_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Año": st.column_config.TextColumn("Año", width="small"),
+            "Riesgo": st.column_config.TextColumn("Riesgo", width="large"),
+            "Expedientes": st.column_config.NumberColumn("Expedientes", format="%d"),
+            "Costo": st.column_config.NumberColumn("Costo", format="S/ %.2f"),
+            "Total": st.column_config.NumberColumn("Total", format="S/ %.2f"),
+        }
+    )
+
+
+def observaciones(resumen_df):
+    st.subheader("Observaciones")
+
+    periodo_max_exp = resumen_df.loc[resumen_df["EXPEDIENTES"].idxmax(), "PERIODO"]
+    periodo_max_rec = resumen_df.loc[resumen_df["RECAUDACION"].idxmax(), "PERIODO"]
+    fuente = resumen_df.attrs.get("source")
+    if fuente == "drive":
+        texto_fuente = "- Los datos se actualizan automáticamente desde Google Drive.\n"
+    elif fuente == "mixed":
+        texto_fuente = "- Se conserva el histórico local y el año actual se actualiza desde Google Drive.\n"
+    else:
+        texto_fuente = "- Los totales anuales se han consignado según el cuadro consolidado fuente.\n"
+
+    st.info(
+        f"""
+- El período con mayor número de expedientes fue **{periodo_max_exp}**.
+- El período con mayor recaudación fue **{periodo_max_rec}**.
+{texto_fuente}
+"""
+    )
+
+def show_licencias_funcionamiento_module():
+    st.header("Módulo de Licencias de Funcionamiento")
+    st.markdown("---")
+
+    detalle_df, resumen_df, tramites_df = load_licencias_funcionamiento_data()
+
+    if resumen_df is None or resumen_df.empty:
+        st.error("No se pudieron cargar los datos.")
+        return
+
+    if resumen_df.attrs.get("source") == "drive":
+        st.success("Datos actualizados desde Google Drive: hojas RESOLUCIONES 2025 y RESOLUCIONES 2026.")
+    elif resumen_df.attrs.get("source") == "mixed":
+        st.success("Histórico local conservado y años disponibles actualizados desde Google Drive.")
+
+    tabs = st.tabs(["General", "2023", "2024", "2025", "2026"])
+
+    with tabs[0]:
+        render_general_licencias(detalle_df, resumen_df, tramites_df)
+
+    for tab, year in zip(tabs[1:], ["2023", "2024", "2025", "2026"]):
+        with tab:
+            render_year_licencias(year, detalle_df, resumen_df, tramites_df)

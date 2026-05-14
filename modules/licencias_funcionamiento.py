@@ -902,7 +902,7 @@ def render_year_license_monthly_charts(year, detalle_year):
         yaxis_title="Licencias emitidas",
         showlegend=False,
     )
-    st.plotly_chart(fig_expedientes, use_container_width=True, key=f"licencias_{year}_emitidas_mensual")
+    st.plotly_chart(fig_expedientes, use_container_width=True, key=f"licencias_anual_{year}_emitidas_mensual")
 
     st.subheader("Recaudación mensual por licencias")
     fig_recaudacion = px.line(
@@ -923,7 +923,7 @@ def render_year_license_monthly_charts(year, detalle_year):
         yaxis_title="Recaudación (S/)",
         showlegend=False,
     )
-    st.plotly_chart(fig_recaudacion, use_container_width=True, key=f"licencias_{year}_recaudacion_mensual")
+    st.plotly_chart(fig_recaudacion, use_container_width=True, key=f"licencias_anual_{year}_recaudacion_mensual")
 
     tabla = mensual.rename(
         columns={
@@ -1047,7 +1047,7 @@ def render_year_license_section(year, detalle_year, tramites_year):
         labels={"MES": "Mes", "EXPEDIENTES": "Expedientes", "RIESGO_AGRUPADO": "Riesgo"},
     )
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Riesgo")
-    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_riesgo_mensual")
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_anual_{year}_riesgo_mensual")
 
     render_year_license_monthly_charts(year, detalle_year)
 
@@ -1098,7 +1098,7 @@ def render_year_group_section(year, title, df_group):
     fig.update_traces(texttemplate="S/ %{y:,.0f}", textposition="outside")
     fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
     section_key = normalize_text(title).replace(" ", "_").replace("/", "_")
-    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_{section_key}_ingresos_mensual")
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_anual_{year}_{section_key}_ingresos_mensual")
 
     fig_cantidad = px.bar(
         resumen,
@@ -1114,7 +1114,7 @@ def render_year_group_section(year, title, df_group):
     )
     fig_cantidad.update_traces(textposition="outside")
     fig_cantidad.update_layout(plot_bgcolor="rgba(0,0,0,0)", legend_title="Tipo")
-    st.plotly_chart(fig_cantidad, use_container_width=True, key=f"licencias_{year}_{section_key}_cantidad_mensual")
+    st.plotly_chart(fig_cantidad, use_container_width=True, key=f"licencias_anual_{year}_{section_key}_cantidad_mensual")
 
     st.dataframe(
         resumen.rename(
@@ -1166,7 +1166,7 @@ def render_year_income_section(year, tramites_year):
         yaxis_title="Recaudación (S/)",
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True, key=f"licencias_{year}_ingresos_tipo")
+    st.plotly_chart(fig, use_container_width=True, key=f"licencias_anual_{year}_ingresos_tipo")
 
     st.dataframe(
         resumen_tipo.rename(

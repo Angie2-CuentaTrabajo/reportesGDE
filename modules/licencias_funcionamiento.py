@@ -504,7 +504,6 @@ def grafico_mensual_licencias(detalle_df):
         yaxis_title="Recaudación (S/)",
         legend_title="Año",
     )
-    section_key = normalize_text(title).replace(" ", "_").replace("/", "_")
     st.plotly_chart(fig, use_container_width=True, key="licencias_general_mensual")
 
     tabla = mensual.pivot_table(

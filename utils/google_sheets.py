@@ -48,7 +48,7 @@ def get_secret_value(key):
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def load_resoluciones_sheet():
+def load_resoluciones_sheet(tab_name=None):
     """Read the private Google Sheet configured in Streamlit secrets."""
     try:
         import gspread
@@ -71,7 +71,7 @@ def load_resoluciones_sheet():
 
     client = gspread.authorize(credentials)
     sheet_id = get_secret_value("GOOGLE_SHEET_ID")
-    tab_name = get_secret_value("GOOGLE_SHEET_TAB")
+    tab_name = tab_name or get_secret_value("GOOGLE_SHEET_TAB")
     try:
         worksheet = client.open_by_key(sheet_id).worksheet(tab_name)
         records = worksheet.get_all_records()
@@ -102,10 +102,19 @@ def load_resoluciones_sheet():
     return df
 
 
-def get_resoluciones_sheet_or_none():
+def get_resoluciones_sheet_or_none(tab_name=None, show_warning=True):
     try:
-        df = load_resoluciones_sheet()
+        df = load_resoluciones_sheet(tab_name)
         return df if df is not None and not df.empty else None
     except Exception as exc:
-        st.warning(f"No se pudo leer Drive. Se usaran datos locales. Detalle: {exc}")
+        if tab_name is None:
+            for fallback_tab in ["RESOLUCIONES 2026"]:
+                try:
+                    df = load_resoluciones_sheet(fallback_tab)
+                    return df if df is not None and not df.empty else None
+                except Exception:
+                    pass
+        if show_warning:
+            tab_text = f" ({tab_name})" if tab_name else ""
+            st.warning(f"No se pudo leer Drive{tab_text}. Se usaran datos locales. Detalle: {exc}")
         return None

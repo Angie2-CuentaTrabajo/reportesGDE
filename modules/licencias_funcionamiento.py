@@ -869,16 +869,21 @@ def render_year_license_section(year, detalle_year, tramites_year):
     expedientes = int(detalle_year["EXPEDIENTES"].sum()) if not detalle_year.empty else len(main_records)
     ingresos = float(detalle_year["TOTAL"].sum()) if not detalle_year.empty else float(main_records["COSTO_NUM"].sum())
     riesgo_medio = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"] == "MEDIO", "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
-    riesgo_alto = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"].isin(["ALTO", "MUY ALTO", "ALTOS Y MUY ALTOS"]), "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
+    riesgo_alto = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"] == "ALTO", "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
+    riesgo_muy_alto = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"] == "MUY ALTO", "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
+    riesgo_alto_consolidado = int(detalle_year.loc[detalle_year["RIESGO_AGRUPADO"] == "ALTOS Y MUY ALTOS", "EXPEDIENTES"].sum()) if not detalle_year.empty else 0
 
-    show_metric_row(
-        [
-            ("Expedientes", f"{expedientes:,}"),
-            ("Ingresos", f"S/ {ingresos:,.2f}"),
-            ("Riesgo medio", f"{riesgo_medio:,}"),
-            ("Alto / muy alto", f"{riesgo_alto:,}"),
-        ]
-    )
+    metricas_riesgo = [
+        ("Expedientes", f"{expedientes:,}"),
+        ("Ingresos", f"S/ {ingresos:,.2f}"),
+        ("Riesgo medio", f"{riesgo_medio:,}"),
+        ("Riesgo alto", f"{riesgo_alto:,}"),
+        ("Riesgo muy alto", f"{riesgo_muy_alto:,}"),
+    ]
+    if riesgo_alto_consolidado:
+        metricas_riesgo.append(("Alto y muy alto consolidado", f"{riesgo_alto_consolidado:,}"))
+
+    show_metric_row(metricas_riesgo)
 
     if detalle_year.empty:
         st.info("No hay detalle mensual por riesgo para este año.")
@@ -1102,13 +1107,13 @@ def render_year_licencias(year, detalle_df, resumen_df, tramites_df):
             tramites_year["PROCEDIMIENTO_NORMALIZADO"] == "LICENCIA DE FUNCIONAMIENTO"
         ].copy()
 
-        render_year_group_section("Duplicados", duplicados)
+        render_year_group_section(year, "Duplicados", duplicados)
         st.markdown("---")
 
-        render_year_group_section("Transferencias", transferencias)
+        render_year_group_section(year, "Transferencias", transferencias)
         st.markdown("---")
 
-        render_year_group_section("Improcedentes con pago", improcedentes)
+        render_year_group_section(year, "Improcedentes con pago", improcedentes)
         st.markdown("---")
 
         render_year_income_section(year, tramites_year)

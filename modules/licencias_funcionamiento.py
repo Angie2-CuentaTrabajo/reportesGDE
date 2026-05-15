@@ -905,23 +905,24 @@ def render_year_license_monthly_charts(year, detalle_year):
     st.plotly_chart(fig_expedientes, use_container_width=True, key=f"licencias_anual_{year}_emitidas_mensual")
 
     st.subheader("Recaudación mensual por licencias")
-    fig_recaudacion = px.line(
-        mensual,
-        x="MES",
-        y="RECAUDACION",
-        markers=True,
+    recaudacion_movil = mensual.sort_values("MES_NUM", ascending=False).copy()
+    fig_recaudacion = px.bar(
+        recaudacion_movil,
+        x="RECAUDACION",
+        y="MES",
+        orientation="h",
         text="RECAUDACION",
-        category_orders={"MES": MONTH_ORDER},
         color_discrete_sequence=["#0f4c81"],
-        height=380,
+        height=max(420, len(recaudacion_movil) * 38),
         labels={"MES": "Mes", "RECAUDACION": "Recaudación (S/)"},
     )
-    fig_recaudacion.update_traces(texttemplate="S/ %{y:,.2f}", textposition="top center", line=dict(width=3))
+    fig_recaudacion.update_traces(texttemplate="S/ %{x:,.2f}", textposition="outside", cliponaxis=False)
     fig_recaudacion.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
-        xaxis_title="Mes",
-        yaxis_title="Recaudación (S/)",
+        xaxis_title="Recaudación (S/)",
+        yaxis_title="Mes",
         showlegend=False,
+        margin=dict(l=10, r=110, t=20, b=40),
     )
     st.plotly_chart(fig_recaudacion, use_container_width=True, key=f"licencias_anual_{year}_recaudacion_mensual")
 

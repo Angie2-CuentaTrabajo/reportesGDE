@@ -27,7 +27,7 @@ MODULES = {
         "handler": show_pachamikuy_module,
     },
     "PACHACARD": {
-        "description": "Indicadores de tarjetas, comercios y entregas.",
+        "description": "Indicadores de tarjetas emitidas, categorias y comercios afiliados.",
         "handler": show_pachacard_module,
     },
     "PACHAMBEAR": {

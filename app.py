@@ -317,6 +317,16 @@ def render_sidebar(selected_module):
     return module
 
 
+def render_module_selector(selected_module):
+    module = st.selectbox(
+        "Cambiar módulo / seleccionar reporte",
+        tuple(MODULES.keys()),
+        index=list(MODULES.keys()).index(selected_module),
+        label_visibility="visible",
+    )
+    return module
+
+
 def render_header(module):
     st.markdown(
         f"""
@@ -342,7 +352,19 @@ def main():
     apply_professional_theme()
 
     default_module = "PACHAMIKUY"
-    selected_module = render_sidebar(default_module)
+    if "active_module" not in st.session_state:
+        st.session_state.active_module = default_module
+
+    sidebar_module = render_sidebar(st.session_state.active_module)
+    if sidebar_module != st.session_state.active_module:
+        st.session_state.active_module = sidebar_module
+        st.rerun()
+
+    selected_module = render_module_selector(st.session_state.active_module)
+    if selected_module != st.session_state.active_module:
+        st.session_state.active_module = selected_module
+        st.rerun()
+
     render_header(selected_module)
 
     MODULES[selected_module]["handler"]()
